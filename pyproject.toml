@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "harbormaster"
+version = "0.1.0"
+description = "Harbormaster: deterministic trade doc verification"
+requires-python = ">=3.10"
+dependencies = [
+  "fastapi>=0.115",
+  "pydantic>=2.0",
+  "pyyaml>=6.0",
+  "uvicorn>=0.30",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
