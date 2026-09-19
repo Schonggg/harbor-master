@@ -234,6 +234,7 @@ def bundle_dir() -> Path | None:
         os.getenv("SDOC_BUNDLE_DIR") or settings.sdoc_bundle_dir,
         r"D:\Downloads\sdoc-hackathon-bundle",
         str(_repo_root() / "sdoc-hackathon-bundle"),
+        str(_repo_root() / "data" / "sdoc"),
         str(data_dir() / "sdoc"),
     ]
     for raw in candidates:

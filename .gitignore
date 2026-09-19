@@ -8,16 +8,14 @@ dist/
 build/
 .venv/
 venv/
-.env
 
-# Data (sponsor inbox — not committed; keep demo fixtures for Vercel)
+# Data caches and local SQLite. Official 520-email bundle lives in data/sdoc/.
 data/inbox/*
 !data/inbox/demo_*.json
 data/attachments/
 data/backups/
 data/cache/
 data/objects/
-data/submission.json
 data/*.db
 data/*.db-journal
 data/*.db-wal
@@ -51,3 +49,4 @@ htmlcov/
 .vercel
 .env.local
 !.env.example
+!.env

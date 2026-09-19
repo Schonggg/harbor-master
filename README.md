@@ -155,16 +155,17 @@ make discipline  # matrix + spec tests
 
 Python 3.11+ (on Windows, `py -3`).
 
+This **private** clone already includes `.env` and the official 520-email bundle at `data/sdoc/`. Do not make the repository public — it contains live keys.
+
 ```powershell
-copy .env.example .env
 py -3 -m pip install -e ".[dev]"
 $env:PYTHONPATH = "src"
 py -3 -m uvicorn harbormaster.api.main:app --host 127.0.0.1 --port 8000
 ```
 
-Open **http://127.0.0.1:8000/** ΓÇö not a static Live Server on `:5500`. That origin has no API. The supported path is FastAPI serving `web/` itself.
+Open **http://127.0.0.1:8000/** — not a static Live Server on `:5500`. That origin has no API. The supported path is FastAPI serving `web/` itself.
 
-Point `SDOC_BUNDLE_DIR` at the official inbox directory (the folder that contains `inbox/email_*.json`). Then click **Seed and run** once.
+`SDOC_BUNDLE_DIR` already points at `./data/sdoc`. Click **Load inbox** if the local board is short of 520. The hosted site stays at [https://harbormaster-1.vercel.app/](https://harbormaster-1.vercel.app/).
 
 With Make:
 
