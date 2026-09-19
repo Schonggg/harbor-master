@@ -1,7 +1,7 @@
 // ③ Pilot deck — the human in the loop. One decision becomes a ledger rule, the
 // ledger replays history, and the queue visibly collapses.
-import { store as bridgeStore } from "../lib/store.js?v=42";
-import { esc, $, $$, on, shortId, diffChars, renderDiff, fmtUsd } from "../lib/dom.js";
+import { store as bridgeStore } from "../lib/store.js?v=44";
+import { esc, $, $$, on, shortId, diffChars, renderDiff, fmtUsd, sourceWaitHtml } from "../lib/dom.js";
 import { gsap, reduced, enter, countTo, collapseOut, pulse, magnetize } from "../lib/motion.js";
 import { fieldZh, fieldEn, RISK, failureZh } from "../lib/copy.js";
 import { card, orderedFields, pilotReasons, ledgerRef, confidenceOf } from "../lib/case.js?v=12";
@@ -42,7 +42,17 @@ export function mount(root, ctx, params = {}) {
   const mainEl = $("#main", root);
 
   on(queueEl, "click", ".queue-item", (_, el) => { runId = el.dataset.run; field = null; lastStamp = null; renderMain(true); renderQueue(); });
-  on(root, "click", "[data-qfilter]", (_, el) => { filter = el.dataset.qfilter; filterPinned = true; pickDefaults(); renderQueue(); renderMain(); });
+  on(root, "click", "[data-qfilter]", (e, el) => {
+    e.preventDefault();
+    const next = el.dataset.qfilter;
+    if (!next) return;
+    filter = next;
+    filterPinned = true;
+    lastStamp = null;
+    pickDefaults({ fromFilter: true });
+    renderQueue();
+    renderMain();
+  });
   on(root, "click", "[data-ledger], #pilot-ledger", () => ctx.navigate("ledger"));
   on(mainEl, "click", "[data-field]", (_, el) => { field = el.dataset.field; renderMain(true); });
   on(mainEl, "click", "[data-decide]", (_, el) => decide(el.dataset.decide));
@@ -52,17 +62,29 @@ export function mount(root, ctx, params = {}) {
   on(mainEl, "click", "[data-open-run]", (_, el) => ctx.openDetail(el.dataset.openRun));
   on(mainEl, "click", "[data-board]", () => ctx.navigate("board"));
 
+  const SMASH = ["ATTACHMENT_CORRUPT", "OCR_GARBLED", "EMPTY_EMAIL", "LLM_TIMEOUT"];
   function isChaos(run) {
     const codes = card(run).failure_codes || [];
-    return codes.includes("CHAOS_INJECTED")
-      || ["ATTACHMENT_CORRUPT", "OCR_GARBLED", "EMPTY_EMAIL", "LLM_TIMEOUT"].some((c) => codes.includes(c));
+    return codes.includes("CHAOS_INJECTED") || SMASH.some((c) => codes.includes(c));
+  }
+  function hasWriting(side) {
+    const v = side?.raw_value;
+    return v != null && String(v).trim() !== "";
   }
   function lockableFields(run) {
-    return orderedFields(run).filter((f) => f.charge && (f.state === "UNCERTAIN" || f.state === "MISMATCH"));
+    return orderedFields(run).filter((f) => (
+      (f.state === "UNCERTAIN" || f.state === "MISMATCH")
+      && hasWriting(f.charge?.left)
+      && hasWriting(f.charge?.right)
+    ));
+  }
+  function canLock(run) {
+    if (card(run).lockable === true) return true;
+    return lockableFields(run).length > 0;
   }
   function rank(run) {
     const lock = lockableFields(run);
-    if (lock.some((f) => f.state === "UNCERTAIN")) return 0;
+    if (card(run).lockable || lock.some((f) => f.state === "UNCERTAIN")) return 0;
     if (lock.length) return 1;
     if (isChaos(run)) return 2;
     if (card(run).degraded) return 3;
@@ -70,9 +92,6 @@ export function mount(root, ctx, params = {}) {
   }
   function sortQueue(list) {
     return [...list].sort((a, b) => rank(a) - rank(b) || String(a.email_id).localeCompare(String(b.email_id)));
-  }
-  function canLock(run) {
-    return lockableFields(run).length > 0;
   }
   function applyFilter(all, id) {
     if (id === "lockable" || id === "grey") return sortQueue(all.filter(canLock));
@@ -83,22 +102,36 @@ export function mount(root, ctx, params = {}) {
   function resolveFilter(all) {
     const nLock = all.filter(canLock).length;
     if (!filterPinned) filter = nLock ? "lockable" : "all";
-    let q = applyFilter(all, filter);
-    if (!q.length && all.length && filter !== "all") {
-      filter = "all";
-      filterPinned = false;
-      q = applyFilter(all, "all");
-    }
-    return { q, nLock };
+    return { q: applyFilter(all, filter), nLock };
   }
-  function queue() {
-    return resolveFilter(store.pilotQueue()).q;
+  function emptyCopy(id, hasRuns) {
+    if (!hasRuns) return { title: "No cases yet", body: "Load the official inbox from the Board first." };
+    if (id === "lockable") return {
+      title: "No pair to lock",
+      body: "Ledger only stores an SI writing and a BL writing. None of the remaining Pilot mail has that pair — it is smash/broken or rules-only. CLEAR already matched; HOLD already confirmed a mismatch. When a later Pilot case has both writings, Lock to Ledger lists it first.",
+    };
+    if (id === "chaos") return {
+      title: "No smashed cases",
+      body: "Nothing in this queue is attachment-corrupt, garbled, empty, or timed out.",
+    };
+    if (id === "degraded") return {
+      title: "No degraded cases",
+      body: "Every remaining Pilot mail extracted with the model, not rules-only.",
+    };
+    return { title: "Queue is empty", body: "Every mail was ruled automatically. To see Pilot work, smash a case that needs a human in Chaos." };
+  }
+  function kindOf(run) {
+    if (canLock(run)) return "lockable";
+    if (isChaos(run)) return "chaos";
+    if (card(run).degraded) return "degraded";
+    return "other";
   }
 
-  function pickDefaults() {
-    const q = queue();
-    if (!store.runById(runId) || (!lastStamp && !store.pilotQueue().find((r) => r.run_id === runId))) {
-      runId = q[0]?.run_id || null;
+  function pickDefaults({ fromFilter = false } = {}) {
+    const q = applyFilter(store.pilotQueue(), filter);
+    const inFiltered = q.some((r) => r.run_id === runId);
+    if (fromFilter || !store.runById(runId) || (!lastStamp && !inFiltered)) {
+      if (!lastStamp) runId = q[0]?.run_id || null;
     }
     const run = store.runById(runId);
     if (!run) { field = null; return; }
@@ -108,48 +141,72 @@ export function mount(root, ctx, params = {}) {
     }
   }
 
+  function renderFilters(nLock, nChaos, nDeg, nAll) {
+    const el = $("#q-filters", root);
+    if (!el) return;
+    const counts = { lockable: nLock, all: nAll, chaos: nChaos, degraded: nDeg };
+    if (el.dataset.ready !== "1") {
+      el.innerHTML = [
+        ["lockable", "Lock to Ledger"],
+        ["all", "All"],
+        ["chaos", "Chaos / broken"],
+        ["degraded", "Degraded"],
+      ].map(([id, label]) => `<button type="button" data-qfilter="${id}">${label}<span class="n">0</span></button>`).join("");
+      el.dataset.ready = "1";
+    }
+    $$("[data-qfilter]", el).forEach((btn) => {
+      const id = btn.dataset.qfilter;
+      btn.classList.toggle("on", id === filter);
+      const n = btn.querySelector(".n");
+      if (n) n.textContent = String(counts[id] ?? 0);
+    });
+  }
+
   function renderQueue(animateIn = false) {
     const all = store.pilotQueue();
     const { q, nLock } = resolveFilter(all);
     const nChaos = all.filter(isChaos).length;
     const nDeg = all.filter((r) => card(r).degraded).length;
     const qn = $("#qn", root);
-    const from = Number(qn?.dataset.value ?? 0) || 0;
-    if (qn && (from === 0 || Math.abs(from - q.length) > 12)) {
+    if (qn) {
       qn.dataset.value = String(q.length);
       qn.textContent = String(q.length);
-    } else if (qn) {
-      countTo(qn, q.length);
     }
-    $("#q-sub", root).textContent = all.length
-      ? `${nLock} can lock to Ledger · ${nChaos} smashed / broken · ${nDeg} degraded`
-      : "Queue is empty";
-    const filters = $("#q-filters", root);
-    if (filters) {
-      const chip = (id, label, n) => `<button type="button" data-qfilter="${id}" class="${filter === id ? "on" : ""}">${label}<span class="n">${n}</span></button>`;
-      filters.innerHTML = `${chip("lockable", "Lock to Ledger", nLock)}${chip("all", "All", all.length)}${chip("chaos", "Chaos / broken", nChaos)}${chip("degraded", "Degraded", nDeg)}`;
+    const sub = $("#q-sub", root);
+    if (sub) {
+      sub.textContent = all.length
+        ? `${nLock} can lock to Ledger · ${nChaos} smashed / broken · ${nDeg} degraded`
+        : "Queue is empty";
     }
+    renderFilters(nLock, nChaos, nDeg, all.length);
     const ledgerBtn = $("#pilot-ledger", root);
     if (ledgerBtn) {
       const n = (store.s.ledger || []).filter((r) => r.active).length;
       ledgerBtn.innerHTML = n ? `Ledger · ${n} rules <span class="arrow">→</span>` : `Ledger rules <span class="arrow">→</span>`;
     }
-    queueEl.innerHTML = q.length ? q.map((r) => {
+    if (gsap) gsap.killTweensOf($$(".queue-item", queueEl));
+    if (!q.length) {
+      const empty = emptyCopy(filter, store.s.runs.length);
+      queueEl.innerHTML = `<div class="empty" style="padding:2rem 1rem"><h3>${esc(empty.title)}</h3><p>${esc(empty.body)}</p></div>`;
+      return;
+    }
+    queueEl.innerHTML = q.map((r) => {
       const c = card(r);
       const reasons = pilotReasons(r);
-      return `<button type="button" class="queue-item ${r.run_id === runId ? "on" : ""}" data-run="${esc(r.run_id)}">
+      return `<button type="button" class="queue-item ${r.run_id === runId ? "on" : ""}" data-run="${esc(r.run_id)}" data-kind="${kindOf(r)}">
         <b>${esc(c.subject || r.email_id)}</b>
         <div class="why">${reasons.slice(0, 2).map((x) => `<span class="chip warn">${esc(x.short || x.text)}</span>`).join("")}${reasons.length > 2 ? `<span class="chip">+${reasons.length - 2}</span>` : ""}</div>
         <small class="mono muted">#${shortId(r.run_id)}</small>
       </button>`;
-    }).join("") : `<div class="empty" style="padding:2rem 1rem"><h3>Nobody waiting</h3><p>No case needs a human ruling. That is the target state.</p></div>`;
+    }).join("");
     if (animateIn && q.length && q.length <= 16) enter($$(".queue-item", queueEl), { stagger: 0.04, y: 10 });
   }
 
   function renderMain(swap = false) {
     const run = store.runById(runId);
     if (!run) {
-      mainEl.innerHTML = `<div class="empty"><h3>${store.s.runs.length ? "Queue is empty" : "No cases yet"}</h3><p>${store.s.runs.length ? "Every mail was ruled automatically. To see Pilot work, smash a case that needs a human in Chaos." : "Load the official inbox from the Board first."}</p><button type="button" class="btn" data-board>Back to Board</button></div>`;
+      const empty = emptyCopy(filter, store.s.runs.length);
+      mainEl.innerHTML = `<div class="empty"><h3>${esc(empty.title)}</h3><p>${esc(empty.body)}</p><button type="button" class="btn" data-board>Back to Board</button></div>`;
       return;
     }
     const c = card(run);
@@ -186,19 +243,36 @@ export function mount(root, ctx, params = {}) {
   function mailBlock(run) {
     const em = store.s.emails[run.email_id];
     const body = (em?.body_text || em?.body || "").trim();
-    store.getEmail(run.email_id).then((got) => {
-      if (!got || runId !== run.run_id) return;
-      const text = (got.body_text || got.body || "").trim();
-      const el = $("#pilot-mail", mainEl);
-      if (el && text && el.dataset.filled !== "1") {
+    const token = run.email_id;
+    if (!body) {
+      const late = setTimeout(() => {
+        const el = $("#pilot-mail", mainEl);
+        if (!el || el.dataset.filled === "1" || el.dataset.token !== token) return;
+        el.innerHTML = sourceWaitHtml({ slow: true });
+      }, 5000);
+      store.getEmail(run.email_id).then((got) => {
+        clearTimeout(late);
+        const el = $("#pilot-mail", mainEl);
+        if (!el || runId !== run.run_id || el.dataset.token !== token) return;
+        const text = (got?.body_text || got?.body || "").trim();
+        el.classList.remove("is-wait");
+        if (!text) {
+          el.innerHTML = `<span class="muted">Source unavailable. Field evidence stays in Court; close this mail as CLEAR or HOLD.</span>`;
+          return;
+        }
         el.dataset.filled = "1";
         el.textContent = text;
-      }
-    }).catch(() => {});
+      });
+      return `
+      <div>
+        <div class="section-title"><h3>Source mail</h3><small>${esc(run.email_id)}</small></div>
+        <div class="pilot-mail is-wait" id="pilot-mail" data-token="${esc(token)}">${sourceWaitHtml()}</div>
+      </div>`;
+    }
     return `
       <div>
         <div class="section-title"><h3>Source mail</h3><small>${esc(run.email_id)}</small></div>
-        <pre class="pilot-mail" id="pilot-mail">${esc(body || "Reading the original…")}</pre>
+        <pre class="pilot-mail" id="pilot-mail" data-filled="1">${esc(body)}</pre>
       </div>`;
   }
 

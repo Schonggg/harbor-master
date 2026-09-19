@@ -41,6 +41,9 @@ export class ApiError extends Error {
   }
 }
 
+/** One-email body fetch. Vercel functions cap at 60s; this is display-only. */
+export const EMAIL_GET_TIMEOUT_MS = 15000;
+
 export async function request(path, { method = "GET", body, timeout = 120000 } = {}) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeout);

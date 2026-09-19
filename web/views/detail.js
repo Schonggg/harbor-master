@@ -1,7 +1,7 @@
 // Case drawer: verdict hero, seven-field comparison, evidence with in-place
 // highlighting of the original message, and hand-offs to court / pilot.
-import { store as bridgeStore } from "../lib/store.js?v=42";
-import { esc, $, $$, on, shortId, fmtUsd, diffChars, renderDiff, reEscape } from "../lib/dom.js";
+import { store as bridgeStore } from "../lib/store.js?v=44";
+import { esc, $, $$, on, shortId, fmtUsd, diffChars, renderDiff, reEscape, sourceWaitHtml } from "../lib/dom.js";
 import { enter } from "../lib/motion.js";
 import { fieldZh, fieldEn, scoutZh, VERDICT, STATE, RISK, strategyZh, failureZh } from "../lib/copy.js";
 import { card, orderedFields, ledgerRef, confidenceOf, pilotReasons } from "../lib/case.js";
@@ -48,13 +48,13 @@ export function renderDetail(root, runId, ctx) {
         ${fields.length ? `
         <div class="ftable">
           <div class="frow head"><span>Field</span><span>SI shipping instruction</span><span>BL bill of lading</span><span>State</span><span></span></div>
-          ${fields.map((fv) => frow(fv)).join("")}
+          ${fields.map((fv) => frow(fv, store)).join("")}
         </div>` : `<div class="empty"><p>This mail is not an SI/BL check, so there are no fields to compare. Scout labelled it “${esc(scoutZh(c.scout?.label))}” and filed it.</p></div>`}
       </section>
 
       <section id="source">
         <div class="section-title"><h3>Source mail</h3><small>EVIDENCE IN PLACE</small></div>
-        <div class="source-text" id="source-text"><span class="muted">Reading the original…</span></div>
+        <div class="source-text" id="source-text">${sourceWaitHtml()}</div>
       </section>
 
       ${c.reply_draft || v !== "PILOT" ? `<section><div class="section-title"><h3>Outbox reply</h3><small>DRAFT · never auto-sent</small></div><div class="reply-draft">${esc(c.reply_draft || "Close this mail as CLEAR or HOLD on Pilot to generate a sendable draft.")}</div></section>` : ""}
@@ -99,7 +99,7 @@ export function renderDetail(root, runId, ctx) {
     setTimeout(() => target.classList.remove("flash"), 1400);
   });
 
-  loadSource(run, $("#source-text", root)).then((email) => {
+  loadSource(store, run, $("#source-text", root)).then((email) => {
     if (!email) return;
     for (const cell of $$(".fval.none[data-fill]", root)) {
       const [side, field] = cell.dataset.fill.split(":");
@@ -135,11 +135,11 @@ function valueFromBody(body, side, field) {
   return "";
 }
 
-function frow(fv) {
+function frow(fv, store) {
   const l = fv.charge?.left;
   const r = fv.charge?.right;
   const ref = ledgerRef(fv);
-  const rule = ref ? store.ruleById(ref.ruleId) : null;
+  const rule = ref ? store?.ruleById?.(ref.ruleId) : null;
   const hasDetail = !!fv.charge;
   return `
     <div class="frow s-${fv.state}" data-field="${esc(fv.field)}">
@@ -209,12 +209,41 @@ export function rationaleZh(fv) {
   return esc(r);
 }
 
-async function loadSource(run, el) {
-  const email = await store.getEmail(run.email_id);
+async function loadSource(store, run, el) {
+  if (!el || !store) return null;
+  const emailId = run.email_id;
+  el.dataset.loading = emailId;
+  const stillHere = () => el.isConnected && el.dataset.loading === emailId;
+  const unavailable = () => `<span class="muted">Source unavailable (${store.live ? "timed out or the backend did not return it" : "offline snapshot does not include it"}). Field evidence is in the table above.</span>`;
+
+  if (!store.s.emails[emailId]) {
+    el.innerHTML = sourceWaitHtml();
+    const late = setTimeout(() => {
+      if (!stillHere() || el.dataset.filled === "1") return;
+      el.innerHTML = sourceWaitHtml({ slow: true });
+    }, 5000);
+    const email = await store.getEmail(emailId);
+    clearTimeout(late);
+    if (!stillHere()) return null;
+    if (!email) {
+      el.innerHTML = unavailable();
+      return null;
+    }
+    paintSource(el, run, email);
+    return email;
+  }
+
+  const email = await store.getEmail(emailId);
+  if (!stillHere()) return null;
   if (!email) {
-    el.innerHTML = `<span class="muted">Source unavailable (${store.live ? "backend did not return it" : "offline snapshot does not include it"}). Field evidence is in the table above.</span>`;
+    el.innerHTML = unavailable();
     return null;
   }
+  paintSource(el, run, email);
+  return email;
+}
+
+function paintSource(el, run, email) {
   const fields = orderedFields(run).filter((f) => f.charge);
   const terms = new Map();
   for (const f of fields) {
@@ -231,8 +260,8 @@ async function loadSource(run, el) {
     const re = new RegExp(`(${sorted.map((t) => reEscape(esc(t))).join("|")})`, "g");
     body = body.replace(re, (m) => `<mark class="${terms.get(unesc(m)) || ""}">${m}</mark>`);
   }
+  el.dataset.filled = "1";
   el.innerHTML = `<div class="hd">${esc(email.subject || "")}</div><div class="muted" style="font-size:.78rem;margin-bottom:.6rem">${esc(email.from_addr || "")} → ${esc((email.to_addrs || []).join(", "))}${(email.attachment_paths || []).length ? ` · attachments ${email.attachment_paths.map((p) => esc(p.split(/[\\/]/).pop())).join(", ")}` : ""}</div>${body || '<span class="muted">(empty body)</span>'}`;
-  return email;
 }
 
 function unesc(s) {

@@ -49,3 +49,55 @@ def test_board_payload_keeps_defence_strategy():
     assert plea["strategy"] == "locode_map"
     assert plea["accepted"] is False
     assert "LOCODE" in plea["argument"]
+    assert slim["card"]["lockable"] is True
+
+
+def test_board_payload_lockable_needs_both_writings():
+    missing_right = _board_payload(
+        {
+            "card": {
+                "verdict": "PILOT",
+                "field_verdicts": [
+                    {
+                        "field": "shipper",
+                        "state": "UNCERTAIN",
+                        "charge": {
+                            "left": {"raw_value": "ACME", "confidence": 0.4},
+                            "right": {"raw_value": "", "confidence": 0.4},
+                        },
+                    }
+                ],
+            }
+        }
+    )
+    assert missing_right["card"]["lockable"] is False
+
+    both = _board_payload(
+        {
+            "card": {
+                "verdict": "PILOT",
+                "field_verdicts": [
+                    {
+                        "field": "shipper",
+                        "state": "UNCERTAIN",
+                        "charge": {
+                            "left": {"raw_value": "ACME LTD", "confidence": 0.4},
+                            "right": {"raw_value": "ACME", "confidence": 0.4},
+                        },
+                    }
+                ],
+            }
+        }
+    )
+    assert both["card"]["lockable"] is True
+
+    smash = _board_payload(
+        {
+            "card": {
+                "verdict": "PILOT",
+                "failure_codes": ["ATTACHMENT_CORRUPT"],
+                "field_verdicts": [],
+            }
+        }
+    )
+    assert smash["card"]["lockable"] is False

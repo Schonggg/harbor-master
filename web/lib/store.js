@@ -5,7 +5,7 @@
 //   offline — replays captured payloads from demo-data.js and simulates the
 //             ledger/replay loop client-side so the demo still tells its story
 //             on a static HTTPS host.
-import { request, API_BASE, ApiError, discoverApiBase } from "./api.js?v=24";
+import { request, API_BASE, ApiError, discoverApiBase, EMAIL_GET_TIMEOUT_MS } from "./api.js?v=25";
 import { DEMO_RUNS, DEMO_EMAILS, DEMO_CHAOS, DEMO_AUTONOMY } from "./demo-data.js";
 
 const clone = (v) => (typeof structuredClone === "function" ? structuredClone(v) : JSON.parse(JSON.stringify(v)));
@@ -129,6 +129,8 @@ class Store extends EventTarget {
     };
     this._offline = { ledger: [], reviews: [] };
     this._pendingVerdicts = new Map();
+    this._emailMiss = new Map();
+    this._emailInflight = new Map();
   }
 
   get s() { return this.state; }
@@ -279,12 +281,19 @@ class Store extends EventTarget {
     });
   }
 
+  _emailMissFresh(emailId) {
+    const until = this._emailMiss.get(emailId);
+    return Boolean(until && Date.now() < until);
+  }
+
   /** Original messages carry the demo gold label (meta.tag) used by the confusion matrix. */
-  async prefetchEmails(runs) {
-    const ids = [...new Set(runs.map((r) => r.email_id).filter((id) => id && !this.state.emails[id]))].slice(0, 4);
-    if (!ids.length) return;
-    const got = await Promise.all(ids.map((id) => request(`/api/emails/${encodeURIComponent(id)}`).catch(() => null)));
-    ids.forEach((id, i) => { if (got[i]) this.state.emails[id] = got[i]; });
+  async prefetchEmails(runs, extraIds = []) {
+    const preferred = [...extraIds, ...(runs || []).map((r) => r.email_id)];
+    const ids = [...new Set(preferred.filter(Boolean))]
+      .filter((id) => id && !this.state.emails[id] && !this._emailMissFresh(id))
+      .slice(0, 8);
+    if (!ids.length || !this.live) return;
+    await Promise.all(ids.map((id) => this.getEmail(id).catch(() => null)));
   }
 
   // ── lookups ────────────────────────────────────────────────────────────
@@ -303,14 +312,34 @@ class Store extends EventTarget {
     return this.state.ledger.find((r) => r.rule_id === id) || null;
   }
 
-  async getEmail(emailId) {
+  async getEmail(emailId, { timeout = EMAIL_GET_TIMEOUT_MS } = {}) {
+    if (!emailId) return null;
     if (this.state.emails[emailId]) return this.state.emails[emailId];
+    if (this._emailMissFresh(emailId)) return null;
     if (!this.live) return null;
+    const pending = this._emailInflight.get(emailId);
+    if (pending) return pending;
+    const job = this._fetchEmail(emailId, timeout);
+    this._emailInflight.set(emailId, job);
     try {
-      const em = await request(`/api/emails/${encodeURIComponent(emailId)}`);
-      this.state.emails[emailId] = em;
-      return em;
+      return await job;
+    } finally {
+      this._emailInflight.delete(emailId);
+    }
+  }
+
+  async _fetchEmail(emailId, timeout) {
+    try {
+      const em = await request(`/api/emails/${encodeURIComponent(emailId)}`, { timeout });
+      if (em) {
+        this.state.emails[emailId] = em;
+        this._emailMiss.delete(emailId);
+        return em;
+      }
+      this._emailMiss.set(emailId, Date.now() + 30000);
+      return null;
     } catch {
+      this._emailMiss.set(emailId, Date.now() + 30000);
       return null;
     }
   }

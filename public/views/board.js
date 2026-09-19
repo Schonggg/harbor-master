@@ -1,5 +1,5 @@
 // ① Verdict board — Worldwide Hubs: three offices, then the docket.
-import { store as bridgeStore } from "../lib/store.js?v=42";
+import { store as bridgeStore } from "../lib/store.js?v=44";
 import { esc, $, $$, on, shortId } from "../lib/dom.js";
 import { enter, countTo, magnetize, tiltify, scrollToY } from "../lib/motion.js";
 import { FIELD_ORDER, scoutZh, VERDICT, fieldZh } from "../lib/copy.js";
@@ -265,6 +265,20 @@ export function mount(root, ctx) {
         </article>`;
     }).join("")}</div>`;
     if (animate && runs.length < 48) enter($$(".mail-card", cardsEl), { stagger: 0.035, y: 16 });
+    prefetchVisible();
+  }
+
+  function prefetchVisible() {
+    const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 160));
+    idle(() => {
+      const ids = $$(".mail-card[data-run]", cardsEl).flatMap((el) => {
+        const box = el.getBoundingClientRect();
+        if (box.bottom < 0 || box.top > innerHeight + 240) return [];
+        const run = store.runById(el.dataset.run);
+        return run?.email_id ? [run.email_id] : [];
+      });
+      store.prefetchEmails([], ids).catch(() => {});
+    });
   }
 
   function renderDocketCopy() {

@@ -66,11 +66,29 @@ def get_job(job_id: str):
     return row
 
 
+def _has_writing(side) -> bool:
+    if not isinstance(side, dict):
+        return False
+    val = side.get("raw_value")
+    return val is not None and str(val).strip() != ""
+
+
+def _field_lockable(fv: dict) -> bool:
+    """True only when both SI and BL writings exist — Ledger stores a pair."""
+    if fv.get("state") not in ("UNCERTAIN", "MISMATCH"):
+        return False
+    charge = fv.get("charge")
+    if not isinstance(charge, dict):
+        return False
+    return _has_writing(charge.get("left")) and _has_writing(charge.get("right"))
+
+
 def _board_payload(payload: dict) -> dict:
     card = payload.get("card") if isinstance(payload, dict) else {}
     if not isinstance(card, dict):
         card = {}
     fields = []
+    lockable = False
     for fv in card.get("field_verdicts") or []:
         if not isinstance(fv, dict):
             continue
@@ -83,6 +101,8 @@ def _board_payload(payload: dict) -> dict:
                 "left": {"raw_value": left.get("raw_value"), "confidence": left.get("confidence")},
                 "right": {"raw_value": right.get("raw_value"), "confidence": right.get("confidence")},
             }
+        if _field_lockable(fv):
+            lockable = True
         fields.append(
             {
                 "field": fv.get("field"),
@@ -120,6 +140,7 @@ def _board_payload(payload: dict) -> dict:
             "pilot_override_note": card.get("pilot_override_note") or "",
             "reply_draft": (card.get("reply_draft") or "")[:2500] or None,
             "field_verdicts": fields,
+            "lockable": lockable,
         },
         "gold_label": payload.get("gold_label"),
     }

@@ -1,7 +1,7 @@
 // ② Court — prosecutor files a charge, the defender tries each deterministic
 // strategy one by one, the judge rules. A GSAP timeline gives it courtroom
 // pacing: slow enough to read, fast enough to keep the room.
-import { store as bridgeStore } from "../lib/store.js?v=42";
+import { store as bridgeStore } from "../lib/store.js?v=44";
 import { esc, $, $$, on, shortId, fmtUsd } from "../lib/dom.js";
 import { gsap, reduced, enter } from "../lib/motion.js";
 import { fieldZh, fieldEn, strategyZh, STRATEGIES, RISK } from "../lib/copy.js";

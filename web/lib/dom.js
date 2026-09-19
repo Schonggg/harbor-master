@@ -121,3 +121,12 @@ export function renderDiff(parts) {
 export function reEscape(s) {
   return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
+
+/** Indeterminate wait for /api/emails/{id}. `slow` after ~5s of waiting. */
+export function sourceWaitHtml({ slow = false } = {}) {
+  return `<div class="source-wait" role="status" aria-live="polite">
+    <i class="source-wait-bar" aria-hidden="true"></i>
+    <span>Reading the original</span>
+    ${slow ? `<small>Still reading — the backend may be waking from sleep.</small>` : ""}
+  </div>`;
+}
