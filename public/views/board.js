@@ -1,10 +1,10 @@
 // ① Verdict board — Worldwide Hubs: three offices, then the docket.
-import { store as bridgeStore } from "../lib/store.js?v=50";
+import { store as bridgeStore } from "../lib/store.js?v=51";
 import { esc, $, $$, on, shortId } from "../lib/dom.js";
 import { enter, countTo, magnetize, tiltify, scrollToY } from "../lib/motion.js";
 import { FIELD_ORDER, scoutZh, VERDICT, fieldZh } from "../lib/copy.js";
 import { card, orderedFields, summarize } from "../lib/case.js?v=12";
-import { highlightText, matchesRun, rankRun } from "../lib/docket-search.js?v=50";
+import { highlightText, matchesRun, rankRun } from "../lib/docket-search.js?v=51";
 
 const HUBS = [
   {
@@ -112,16 +112,16 @@ export function mount(root, ctx) {
             <h2>Docket</h2>
             <p id="docket-copy">One card per email. Open any card for the seven-field compare.</p>
           </div>
-          <div class="docket-tools">
-            <form class="docket-find" id="docket-find" role="search">
-              <label for="docket-q">Find</label>
-              <input id="docket-q" name="q" type="search" enterkeyhint="search" autocomplete="off" spellcheck="false" placeholder="004 · shipper · Ningbo" aria-label="Search docket by number or keyword" value="${esc(state.query)}" />
-              <span class="find-meta" id="docket-hits" aria-live="polite"></span>
-              <button type="button" class="find-clear" id="docket-clear" hidden aria-label="Clear search">Clear</button>
-            </form>
-            <button type="button" class="btn" id="board-refresh">Refresh</button>
-          </div>
+          <button type="button" class="btn" id="board-refresh">Refresh</button>
         </div>
+        <form class="docket-find" id="docket-find" role="search">
+          <span class="find-kicker" aria-hidden="true">Find</span>
+          <label class="sr-only" for="docket-q">Search by email number or keyword</label>
+          <input id="docket-q" name="q" type="search" enterkeyhint="search" autocomplete="off" spellcheck="false" placeholder="Type 004, a subject word, or a field value" aria-label="Search docket by number or keyword" value="${esc(state.query)}" />
+          <kbd class="find-key">/</kbd>
+          <span class="find-meta" id="docket-hits" aria-live="polite"></span>
+          <button type="button" class="find-clear" id="docket-clear" hidden aria-label="Clear search">Clear</button>
+        </form>
         <div class="filter-row" id="filters"></div>
         <div id="cards"></div>
       </div>
