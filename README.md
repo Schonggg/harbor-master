@@ -22,6 +22,41 @@ Private GitHub: [https://github.com/Schonggg/harbor-master](https://github.com/S
 
 ---
 
+## Current progress
+
+What is in production code as of 19 Sep 2026. The live header still shows the last Postgres run until the 520 is processed again; the rules below are what that re-run will use.
+
+**Official categories (local rules-only walk of `data/sdoc/`, 520 emails).** This is our classifier, not organizer Stage-1 F1:
+
+| Category | Count | How the rule decides |
+|---|---|---|
+| `BL_COMPARISON` | 220 | SI+BL attachments, or compare/check/verify/confirm-docs language. Not a bare "draft BL" or "SI" mention. |
+| `SI_REQUEST` | 125 | Field list (POL/POD/Shipper/Consignee) or "please find / prepare shipping instruction", including the closer "Please revert with draft BL once available." Commits at confidence 0.96 (above the 0.95 rule floor). |
+| `INVOICE_QUERY` | 98 | Billing / THC / D&D language. An invoice that only name-drops SI and BL stays here. |
+| `GENERAL` | 49 | Ops noise, greetings, reminders. A bare SI/BL mention is not promoted to SI_REQUEST or BL_COMPARISON. |
+| `SPAM` | 28 | Promo / unsubscribe / lottery. |
+
+Of the 220 comparison cases: **148 OK**, **52 MISMATCH**, **20 NEEDS_REVIEW**.
+
+**Official `NEEDS_REVIEW` (same local walk).** Earlier submissions marked ~226 mails for review because SI requests were swallowed as comparisons and then failed pairing. After Scout + health-check tightening, the gate is 20 mails, five per reason:
+
+| `review_reason` | Count | Trigger |
+|---|---|---|
+| `missing_attachment` | 5 | Compare requested and the pair is dropped / still missing. Scene A ("please send the draft") is not this. |
+| `wrong_doc_type` | 5 | Attachment is an invoice, packing list, or certificate even if the filename is `*_BL.txt`. |
+| `unreadable` | 5 | Empty text layer / file will not open / image-only scan with no OCR text. |
+| `missing_value` | 5 | A scored field is blank or a placeholder (`N/A`, `TBA`, `____`) on the document. |
+
+`wrong_doc_type`, `missing_attachment`, and `unreadable` already caught their five true cases; the change was to stop them (and `missing_value`) firing on mails that should be OK or MISMATCH. `missing_value` no longer fires just because a Word table was unread or a `*_BL` filename hid an invoice.
+
+**Reader.** Image-only PDFs go to VisionParser. A short labelled PDF still uses PdfParser (`pdf_has_text` min 1 character) so the 220-cell format matrix stays green. DOCX tables are flattened to `label: value` lines. PDF labels on their own line ("To the Order of" then the company) are read as the next line.
+
+**Bridge (already on the public site).** Board **Find** (`/` to focus): email number (`12` or `email_012`) and keywords over subject / verdict / extracted fields. Full-width paper strip. Pilot Chaos / Lock to Ledger filters, Source-mail 15s timeout, HOLD-strictness dial, mild card tilt. Cache lockstep: `app.js?v=51` and `store.js?v=51`, `styles.css?v=33`.
+
+**Tests.** `py -3 -m pytest -q` is **122 passed**. Official competition `final_score` is still unknown until `make submit` reaches the organizers' inbox.
+
+---
+
 ## Why this shape
 
 | Typical pipeline | Harbormaster |
@@ -50,8 +85,8 @@ Email -> Scout -> Reader -> Court -> Risk -> Report -> Bridge
 
 | Layer | Responsibility |
 |---|---|
-| **Scout** | Rules first, LLM second. Commits to one official category: `BL_COMPARISON`, `SI_REQUEST`, `INVOICE_QUERY`, `GENERAL`, `SPAM`. |
-| **Reader** | MIME-aware parsers (PDF via PyMuPDF, DOCX, XLSX, text, vision). The LLM extracts `FieldValue` with evidence. It never writes a verdict. |
+| **Scout** | Rules first, LLM second. Commits to one official category: `BL_COMPARISON`, `SI_REQUEST`, `INVOICE_QUERY`, `GENERAL`, `SPAM`. Comparison needs a compare/check/verify verb or an SI+BL pair; a field-list SI request is `SI_REQUEST` even if the mail says "draft BL". |
+| **Reader** | MIME-aware parsers (PDF via PyMuPDF, DOCX including tables, XLSX, text, vision for image-only scans). The LLM extracts `FieldValue` with evidence. It never writes a verdict. |
 | **Court** | Prosecutor / Defender / Judge. Seven defences: suffix strip, UN/LOCODE map, unit convert, reference resolve, numeric extract, label synonym, OCR confusion (scans only). |
 | **Risk** | Prices exposure from `config/risk_matrix.yaml` and rolls field states into CLEAR / HOLD / PILOT. |
 | **Pilot** | Human desk. Case-level CLEAR or HOLD. Field-level **Lock in Ledger** writes a reusable pair rule. The live pipeline does not auto-close PILOT. |
@@ -77,14 +112,14 @@ Six operator views, same origin as the API when served by FastAPI:
 
 | Key | View | Purpose |
 |---|---|---|
-| `1` | **Board** | Docket of unique emails. Official subjects, CLEAR / HOLD / PILOT counters. |
+| `1` | **Board** | Docket of unique emails. Official subjects, CLEAR / HOLD / PILOT counters. Full-width **Find** strip: type an email number or a keyword (`/` focuses the box). |
 | `2` | **Court** | Charge first (SI vs BL), then one named defence at a time, then the three-state ruling. `R` replays. |
 | `3` | **Pilot** | Human queue. Filters: Lock to Ledger / All / Chaos / Degraded. Case CLEAR or HOLD. Field **Lock in Ledger** writes a pair rule. |
 | `4` | **Ledger** | Reusable pair rules: who decided, which writings, which cases replay touched. |
 | `5` | **Chaos** | Four live injectors: LLM timeout, OCR garbage, corrupt attachment, empty email. Smashed cases land in Pilot, not HOLD. |
 | `6` | **Metrics** | Score-sheet KPIs (0 false alarms, 220/220, 520/520), live desk mix, then a **HOLD-strictness dial** that can rewrite this session's header. |
 
-Keyboard: `1-6` switch views, `R` replay court, `Esc` close detail.
+Keyboard: `1-6` switch views, `/` focus Board Find, `R` replay court, `Esc` close detail.
 
 Header buttons are **Refresh** and **Load inbox**. Load inbox fills at most one missing official email per request (Vercel 60s cap), then continues in the background until 520.
 
@@ -94,9 +129,11 @@ Header buttons are **Refresh** and **Load inbox**. Load inbox fills at most one 
 
 **HOLD strictness (Metrics).** The dial previews a stricter or looser HOLD gate on the **same 520 evidence**. MATCH fields and empty / degraded cards stay as recorded. **Apply to this desk** rewrites this session's header, Board, and Pilot. **Restore recorded 520** (or Refresh) returns the stamps from Postgres. Official `submission.json` is not rewritten. On this corpus leftover mismatch confidence sits around 0.93 and 0.96, so Balanced 0.92 matches the live header and Cautious 0.97 hands those HOLDs to Pilot.
 
+**Board Find.** The docket strip is a paper bar with a green edge when a query is active. Numeric tokens match `email_N` / `email_00N` exactly. Other tokens search subject, verdict, and extracted field values. Clear empties the query; it is stored in `sessionStorage` as `hm.docket.q`.
+
 **Board cards.** Mild mouse-follow tilt. Every view must import `store.js` with the same `?v=` as `app.js` in `web/index.html`. A mismatch creates two stores and the board looks empty while the header still counts 520.
 
-**Cache.** After a UI change, bump that `?v=` lockstep, run `py -3 scripts/vercel_build.py`, then deploy. Do not hard-refresh only `index.html`.
+**Cache.** After a UI change, bump that `?v=` lockstep (`app.js` / `store.js` currently `?v=51`, `styles.css` `?v=33`), run `py -3 scripts/vercel_build.py`, then deploy. Do not hard-refresh only `index.html`.
 
 The frontend (`web/`) is static - no build step. Three.js and GSAP are vendored. If the API is unreachable, the Bridge falls back to **offline replay** from `web/lib/demo-data.js`. That 14-email snapshot is **not** mixed into the live 520 board.
 
@@ -119,7 +156,7 @@ The Bridge and the graded submission share one pipeline and two contracts.
 - Seven snake_case fields: `shipper`, `consignee`, `notify_party`, `port_of_loading`, `port_of_discharge`, `container_count`, `gross_weight_kg`
 - `decided_by`: `rule` or `llm`
 
-PILOT on the Bridge is a human interrupt. Official `NEEDS_REVIEW` is reserved for unreadable or missing-document cases, not for "the model was unsure." Unparseable compare values also go to `NEEDS_REVIEW` - they must not silently become `MISMATCH`. Scene A ("please send draft" with no files) is not `missing_attachment`. A structural `wrong_doc_type` is a health check, not an L5 fuzzy match.
+PILOT on the Bridge is a human interrupt. Official `NEEDS_REVIEW` is reserved for unreadable or missing-document cases, not for "the model was unsure." Unparseable compare values also go to `NEEDS_REVIEW` - they must not silently become `MISMATCH`. Scene A ("please send draft" with no files) is not `missing_attachment`. A structural `wrong_doc_type` is a health check, not an L5 fuzzy match. On the local 520, those four reasons fire **five times each** (20 mails). Do not treat a previous ~226-review dump as the current gate.
 
 ---
 
@@ -331,7 +368,7 @@ data/inbox/      local replay fixtures (demo_* only)
 docs/            architecture, demo script, ADRs
 eval/            confusion matrix and false-alarm reports
 reports/         discipline + robustness snapshots + official_score.json
-scripts/         seed helpers, HTTPS, Supabase push, corpus ritual
+scripts/         seed helpers, HTTPS, Supabase push, corpus ritual, debug_* classifiers
 src/harbormaster
   api/           FastAPI app, compact /api/runs, hosted seed, ops
   court/         prosecutor, defender, judge, seven strategies
