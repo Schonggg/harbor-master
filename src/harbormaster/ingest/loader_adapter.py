@@ -486,9 +486,17 @@ class LoaderAdapter:
         return self.list_email_ids(source=source)
 
     def submit(self, payload: dict[str, Any]) -> dict[str, Any]:
-        resp = self._post("submit", payload)
+        from harbormaster.report.official_score import organizer_payload, persist_scoreboard
+
+        body = organizer_payload(payload) if payload and isinstance(next(iter(payload.values()), None), dict) else payload
+        resp = self._post("submit", body)
         data = resp.json()
-        return data if isinstance(data, dict) else {"result": data}
+        out = data if isinstance(data, dict) else {"result": data}
+        try:
+            persist_scoreboard(out, source=self.base_url or "submit")
+        except Exception:
+            pass
+        return out
 
     def catalog(self, *, source: str = "official") -> list[dict[str, Any]]:
         """Subjects and attachment counts without running the court."""

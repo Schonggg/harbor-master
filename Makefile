@@ -1,4 +1,4 @@
-.PHONY: setup run demo eval test lint reset matrix ritual discipline
+.PHONY: setup run demo eval test lint reset matrix ritual discipline score-report
 
 PYTHON ?= python
 PIP ?= $(PYTHON) -m pip
@@ -23,6 +23,9 @@ full:
 
 submit:
 	$(PYTHON) scripts/run_pipeline.py --full --submit
+
+score-report:
+	$(PYTHON) scripts/score_report.py
 
 backup:
 	$(PYTHON) scripts/backup_db.py

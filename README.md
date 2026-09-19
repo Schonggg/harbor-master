@@ -142,9 +142,11 @@ Without an LLM key the product still runs: Scout and Reader degrade to rules, th
 
 ## Score-sheet discipline
 
-Hackathon scoring punishes false alarms harder than misses. Harbormaster treats that as a product constraint, not a slide:
+Two different number families live in this repo. Do not mix them up.
 
-| Ritual | What it proves |
+**Internal consistency (not the competition metric).** These prove the pipeline does not crash and that our own equivalent-writing traps stay green. They are **not** Stage-1 / Stage-3 / end-to-end F1:
+
+| Check | What it proves |
 |---|---|
 | **Format matrix** | 7 fields x txt / pdf / docx / xlsx x known labels = **220 cells**. Every cell must pass. |
 | **Full-inbox ritual** | The **520** official emails, crash-free. Evening ritual on the live board is 520/520. |
@@ -156,6 +158,19 @@ make matrix      # 220-cell format matrix
 make ritual      # full 520-email corpus
 make discipline  # matrix + spec tests
 ```
+
+**Official competition score.** Organizers compute:
+
+`final_score = 0.30 * stage1_macro_f1 + 0.20 * stage3_defect_f1 + 0.50 * end_to_end_rate`
+
+with NEEDS_REVIEW precision/recall as a separate reliability axis. We never have ground-truth labels. The only legitimate score is a POST of our own `data/submission.json` to `INBOX_BASE_URL/submit` (or handing that file to the organizers' `score_cli.py`). Saved scoreboards live in `reports/official_score.json` (append-only list) and `reports/official_scores/`.
+
+```bash
+make submit         # full corpus -> submission.json -> POST /submit (if the inbox HTTP server is up)
+make score-report   # print the latest saved official scoreboard
+```
+
+No official score is recorded yet (`reports/official_score.json` is an empty list). Until `make submit` reaches the organizers' endpoint, do not quote a final_score.
 
 ---
 
@@ -293,7 +308,8 @@ make ritual      # full 520-email corpus
 make discipline  # matrix + official spec tests
 make eval        # confusion matrix + false-alarm report
 make full        # rules-only corpus into submission.json
-make submit      # full corpus with LLM extract where configured
+make submit      # full corpus with LLM extract where configured, then POST /submit
+make score-report  # latest official scoreboard from reports/official_score.json
 ```
 
 Windows without Make:
@@ -314,7 +330,7 @@ data/sdoc/       official 520-email bundle (inbox + attachments)
 data/inbox/      local replay fixtures (demo_* only)
 docs/            architecture, demo script, ADRs
 eval/            confusion matrix and false-alarm reports
-reports/         discipline + robustness snapshots
+reports/         discipline + robustness snapshots + official_score.json
 scripts/         seed helpers, HTTPS, Supabase push, corpus ritual
 src/harbormaster
   api/           FastAPI app, compact /api/runs, hosted seed, ops

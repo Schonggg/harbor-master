@@ -44,9 +44,20 @@ def main() -> None:
         print(json.dumps({k: v for k, v in out.items() if k != "email_ids"}, indent=2, default=str))
         print(f"\n→ wrote {out['path']} ({out['count']} emails)")
         if args.submit:
+            from harbormaster.report.official_score import format_report
+
             loader = LoaderAdapter()
             payload = json.loads(Path(out["path"]).read_text(encoding="utf-8"))
+            if not loader.inbox_reachable():
+                print(
+                    "Wrote submission.json but INBOX_BASE_URL is not reachable — "
+                    "no official score recorded. Set the organizers' HTTP inbox and re-run "
+                    "`make submit`, or hand data/submission.json to score_cli.py."
+                )
+                print(format_report())
+                return
             print(json.dumps(loader.submit(payload), indent=2))
+            print(format_report())
         return
 
     email_id = "demo_si_vs_bl" if args.demo else args.email_id

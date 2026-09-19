@@ -33,7 +33,9 @@ def select_parser(path: Path) -> BaseParser:
     if suffix in {".xlsx", ".xls"} or "spreadsheet" in mime:
         return XlsxParser()
     if suffix == ".pdf" or mime == "application/pdf":
-        if pdf_has_text(path):
+        # Any real text layer stays on PdfParser. The 40-char unreadable floor is a
+        # health-check, not a scan detector — short labelled PDFs still have type.
+        if pdf_has_text(path, min_chars=1):
             return PdfParser()
-        return PdfParser()
+        return VisionParser()
     return TextParser()
