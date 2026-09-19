@@ -1,8 +1,8 @@
 // ③ Pilot deck — the human in the loop. One decision becomes a ledger rule, the
 // ledger replays history, and the queue visibly collapses.
-import { store as bridgeStore } from "../lib/store.js?v=44";
+import { store as bridgeStore } from "../lib/store.js?v=45";
 import { esc, $, $$, on, shortId, diffChars, renderDiff, fmtUsd, sourceWaitHtml } from "../lib/dom.js";
-import { gsap, reduced, enter, countTo, collapseOut, pulse, magnetize } from "../lib/motion.js";
+import { gsap, reduced, enter, countTo, collapseOut, pulse } from "../lib/motion.js";
 import { fieldZh, fieldEn, RISK, failureZh } from "../lib/copy.js";
 import { card, orderedFields, pilotReasons, ledgerRef, confidenceOf } from "../lib/case.js?v=12";
 
@@ -459,7 +459,6 @@ export function mount(root, ctx, params = {}) {
 
   function renderAll() { pickDefaults(); renderQueue(false); renderMain(); }
   renderAll();
-  const unMag = magnetize(queueEl, ".queue-item", 5);
 
   return {
     update(_s, reason) {
@@ -479,7 +478,7 @@ export function mount(root, ctx, params = {}) {
       renderMain();
     },
     setParams(p) { if (p.run) runId = p.run; if (p.field) field = p.field; lastStamp = null; pickDefaults(); renderQueue(); renderMain(true); },
-    destroy() { unMag?.(); },
+    destroy() {},
   };
 }
 

@@ -840,7 +840,6 @@ select.ctl, input.ctl {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.85rem;
-  perspective: 1600px;
 }
 .mail-card {
   position: relative;
@@ -855,9 +854,12 @@ select.ctl, input.ctl {
   cursor: pointer;
   text-align: left;
   overflow: hidden;
-  transition: transform 0.25s var(--ease-out), filter 0.25s var(--ease-out);
+  transition: border-color 0.2s ease, filter 0.2s ease;
   box-shadow: none;
-  transform-style: preserve-3d;
+}
+.mail-card:hover {
+  border-color: color-mix(in srgb, var(--v) 50%, var(--line));
+  filter: brightness(1.03);
 }
 .mail-card::before {
   content: "";
@@ -879,7 +881,6 @@ select.ctl, input.ctl {
   pointer-events: none;
 }
 .mail-card.lit::after { opacity: 1; }
-.mail-card:hover { border-color: color-mix(in srgb, var(--v) 50%, var(--line)); }
 .mail-card:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
 .mail-card .row { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
 .verdict-tag {
@@ -1497,11 +1498,21 @@ select.ctl, input.ctl {
 }
 .queue-head > div:first-child { display: grid; gap: 0.35rem; min-width: 0; }
 .queue-filters {
-  padding: 0.55rem 0.7rem 0.35rem;
+  display: flex;
   flex-wrap: wrap;
+  width: 100%;
+  padding: 0.55rem 0.7rem 0.35rem;
   flex: 0 0 auto;
 }
-.queue-filters .n { margin-left: 0.35rem; opacity: 0.65; }
+.queue-filters button {
+  flex: 1 1 42%;
+  min-width: 0;
+}
+.queue-filters button .n {
+  margin-left: 0.35rem;
+  opacity: 0.65;
+  flex-shrink: 0;
+}
 .queue-head .big {
   font-family: var(--font-display);
   font-size: 3rem;
@@ -1511,13 +1522,13 @@ select.ctl, input.ctl {
 }
 .queue-head small { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.16em; color: var(--text-3); }
 .queue-list {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0.35rem;
   padding: 0.6rem;
   overflow-y: auto;
   flex: 1 1 auto;
   min-height: 0;
-  align-content: start;
 }
 .queue-item {
   display: grid;
@@ -1530,7 +1541,9 @@ select.ctl, input.ctl {
   color: var(--text-2);
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s;
+  flex: 0 0 auto;
   min-width: 0;
+  min-height: min-content;
   overflow: hidden;
 }
 .queue-item:hover { background: rgba(255, 255, 255, 0.04); }

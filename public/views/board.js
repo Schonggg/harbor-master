@@ -1,5 +1,5 @@
 // ① Verdict board — Worldwide Hubs: three offices, then the docket.
-import { store as bridgeStore } from "../lib/store.js?v=44";
+import { store as bridgeStore } from "../lib/store.js?v=45";
 import { esc, $, $$, on, shortId } from "../lib/dom.js";
 import { enter, countTo, magnetize, tiltify, scrollToY } from "../lib/motion.js";
 import { FIELD_ORDER, scoutZh, VERDICT, fieldZh } from "../lib/copy.js";
@@ -315,8 +315,7 @@ export function mount(root, ctx) {
   }
 
   update();
-  const unMag = magnetize(hubsEl, ".hub", 10);
-  const unTilt = tiltify(hubsEl, ".hub", { max: 7, glare: true });
-  const unCardTilt = tiltify(cardsEl, ".mail-card", { max: 4, glare: true });
-  return { update, destroy() { unMag?.(); unTilt?.(); unCardTilt?.(); } };
+  const unMag = magnetize(hubsEl, ".hub", 6);
+  const unTilt = tiltify(hubsEl, ".hub", { max: 3, glare: true });
+  return { update, destroy() { unMag?.(); unTilt?.(); } };
 }

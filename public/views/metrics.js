@@ -1,6 +1,6 @@
 // ⑥ Metrics + autonomy dial — false alarms as the hero number, confusion matrix,
 // field-level agreement, and a live what-if dial over the match-confidence floor.
-import { store as bridgeStore } from "../lib/store.js?v=44";
+import { store as bridgeStore } from "../lib/store.js?v=45";
 import { esc, $, $$, on, clamp } from "../lib/dom.js";
 import { enter, countTo } from "../lib/motion.js";
 import { FIELD_ORDER, fieldZh, fieldEn, PRESETS } from "../lib/copy.js";
