@@ -1,0 +1,13 @@
+{
+  "subject": "New shipping instruction needed for HM-2150",
+  "from": "ops@shipper.example",
+  "to": [
+    "desk@carrier.example"
+  ],
+  "body": "Please prepare a new shipping instruction for HM-2150: 2 x 20GP, ceramic tiles, Shenzhen to Jebel Ali. Draft to follow tomorrow.",
+  "attachments": [],
+  "meta": {
+    "demo": true,
+    "tag": "shipping_instruction"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "subject": "SI vs BL check \u2014 booking HM-2126",
+  "from": "ops@shipper.example",
+  "to": [
+    "desk@carrier.example"
+  ],
+  "body": "Please reconcile SI and BL draft.\n\n=== SHIPPING INSTRUCTION ===\nConsignee: BALTIC FORWARDING GMBH\nNotify Party: SAME AS CONSIGNEE\nPort of Loading: Ningbo\nPort of Discharge: Hamburg\nNo. of Containers: TWO (2) x 40HC\nGross Weight: 21.6 MT\nVessel / Voyage: CMA CGM MARCO POLO / 0FL2E\n\n=== BILL OF LADING DRAFT ===\nConsignee: BALTIC FORWARDING GMBH\nNotify Party: SAME AS CONSIGNEE\nPort of Loading: CNNGB\nPort of Discharge: DEHAM\nContainers: 2\nGross Weight: 21600 KGS\nVessel / Voyage: CMA CGM MARCO POLO / 0FL2E\n",
+  "attachments": [],
+  "meta": {
+    "demo": true,
+    "tag": "shipping_instruction"
+  }
+}

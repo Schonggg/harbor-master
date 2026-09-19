@@ -1,0 +1,13 @@
+{
+  "subject": "Urgent: consignee mismatch on BL draft HM-2091",
+  "from": "docs@forwarder.example",
+  "to": [
+    "desk@carrier.example"
+  ],
+  "body": "Please check \u2014 shipper insists SI is correct.\n\n=== SHIPPING INSTRUCTION ===\nConsignee: NORTHSTAR LOGISTICS PTE LTD\nNotify Party: SAME AS CONSIGNEE\nPort of Loading: Singapore\nPort of Discharge: Rotterdam\nNo. of Containers: 2\nGross Weight: 18400 KGS\nVessel / Voyage: MSC ISABELLA / 12W\n\n=== BILL OF LADING DRAFT ===\nConsignee: SOUTHPAC TRADING LLC\nNotify Party: SAME AS CONSIGNEE\nPort of Loading: Singapore\nPort of Discharge: Rotterdam\nContainers: 2\nGross Weight: 18400 KGS\nVessel / Voyage: MSC ISABELLA / 12W\n",
+  "attachments": [],
+  "meta": {
+    "demo": true,
+    "tag": "bill_of_lading"
+  }
+}

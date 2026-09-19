@@ -1,0 +1,301 @@
+{
+  "status": "ok",
+  "talking_point": "The score sheet punishes false alarms harder than misses. We do not sample a few txt cases. Every field x txt/pdf/docx/xlsx x known label is a cell, and every normalization is checked against equivalent pairs before it is allowed to catch a mismatch.",
+  "ran_at": "2026-09-18T19:56:40.164668+00:00",
+  "matrix": {
+    "cells": 220,
+    "passed": 220,
+    "fail_count": 0,
+    "failed": [],
+    "by_fmt": {
+      "txt": {
+        "ok": 55,
+        "fail": 0
+      },
+      "pdf": {
+        "ok": 55,
+        "fail": 0
+      },
+      "docx": {
+        "ok": 55,
+        "fail": 0
+      },
+      "xlsx": {
+        "ok": 55,
+        "fail": 0
+      }
+    },
+    "by_field": {
+      "shipper": {
+        "ok": 24,
+        "fail": 0
+      },
+      "consignee": {
+        "ok": 24,
+        "fail": 0
+      },
+      "notify_party": {
+        "ok": 24,
+        "fail": 0
+      },
+      "port_of_loading": {
+        "ok": 28,
+        "fail": 0
+      },
+      "port_of_discharge": {
+        "ok": 28,
+        "fail": 0
+      },
+      "container_count": {
+        "ok": 44,
+        "fail": 0
+      },
+      "gross_weight_kg": {
+        "ok": 48,
+        "fail": 0
+      }
+    },
+    "grid": {
+      "shipper": {
+        "txt": {
+          "ok": 6,
+          "fail": 0,
+          "n": 6
+        },
+        "pdf": {
+          "ok": 6,
+          "fail": 0,
+          "n": 6
+        },
+        "docx": {
+          "ok": 6,
+          "fail": 0,
+          "n": 6
+        },
+        "xlsx": {
+          "ok": 6,
+          "fail": 0,
+          "n": 6
+        }
+      },
+      "consignee": {
+        "txt": {
+          "ok": 6,
+          "fail": 0,
+          "n": 6
+        },
+        "pdf": {
+          "ok": 6,
+          "fail": 0,
+          "n": 6
+        },
+        "docx": {
+          "ok": 6,
+          "fail": 0,
+          "n": 6
+        },
+        "xlsx": {
+          "ok": 6,
+          "fail": 0,
+          "n": 6
+        }
+      },
+      "notify_party": {
+        "txt": {
+          "ok": 6,
+          "fail": 0,
+          "n": 6
+        },
+        "pdf": {
+          "ok": 6,
+          "fail": 0,
+          "n": 6
+        },
+        "docx": {
+          "ok": 6,
+          "fail": 0,
+          "n": 6
+        },
+        "xlsx": {
+          "ok": 6,
+          "fail": 0,
+          "n": 6
+        }
+      },
+      "port_of_loading": {
+        "txt": {
+          "ok": 7,
+          "fail": 0,
+          "n": 7
+        },
+        "pdf": {
+          "ok": 7,
+          "fail": 0,
+          "n": 7
+        },
+        "docx": {
+          "ok": 7,
+          "fail": 0,
+          "n": 7
+        },
+        "xlsx": {
+          "ok": 7,
+          "fail": 0,
+          "n": 7
+        }
+      },
+      "port_of_discharge": {
+        "txt": {
+          "ok": 7,
+          "fail": 0,
+          "n": 7
+        },
+        "pdf": {
+          "ok": 7,
+          "fail": 0,
+          "n": 7
+        },
+        "docx": {
+          "ok": 7,
+          "fail": 0,
+          "n": 7
+        },
+        "xlsx": {
+          "ok": 7,
+          "fail": 0,
+          "n": 7
+        }
+      },
+      "container_count": {
+        "txt": {
+          "ok": 11,
+          "fail": 0,
+          "n": 11
+        },
+        "pdf": {
+          "ok": 11,
+          "fail": 0,
+          "n": 11
+        },
+        "docx": {
+          "ok": 11,
+          "fail": 0,
+          "n": 11
+        },
+        "xlsx": {
+          "ok": 11,
+          "fail": 0,
+          "n": 11
+        }
+      },
+      "gross_weight_kg": {
+        "txt": {
+          "ok": 12,
+          "fail": 0,
+          "n": 12
+        },
+        "pdf": {
+          "ok": 12,
+          "fail": 0,
+          "n": 12
+        },
+        "docx": {
+          "ok": 12,
+          "fail": 0,
+          "n": 12
+        },
+        "xlsx": {
+          "ok": 12,
+          "fail": 0,
+          "n": 12
+        }
+      }
+    },
+    "formats": [
+      "txt",
+      "pdf",
+      "docx",
+      "xlsx"
+    ],
+    "fields": [
+      "shipper",
+      "consignee",
+      "notify_party",
+      "port_of_loading",
+      "port_of_discharge",
+      "container_count",
+      "gross_weight_kg"
+    ]
+  },
+  "false_alarms": {
+    "count": 0,
+    "pairs": [
+      {
+        "field": "shipper",
+        "equivalent_ok": true,
+        "near_miss_ok": true,
+        "false_alarm": false
+      },
+      {
+        "field": "consignee",
+        "equivalent_ok": true,
+        "near_miss_ok": true,
+        "false_alarm": false
+      },
+      {
+        "field": "notify_party",
+        "equivalent_ok": true,
+        "near_miss_ok": true,
+        "false_alarm": false
+      },
+      {
+        "field": "port_of_loading",
+        "equivalent_ok": true,
+        "near_miss_ok": true,
+        "false_alarm": false
+      },
+      {
+        "field": "port_of_discharge",
+        "equivalent_ok": true,
+        "near_miss_ok": true,
+        "false_alarm": false
+      },
+      {
+        "field": "container_count",
+        "equivalent_ok": true,
+        "near_miss_ok": true,
+        "false_alarm": false
+      },
+      {
+        "field": "gross_weight_kg",
+        "equivalent_ok": true,
+        "near_miss_ok": true,
+        "false_alarm": false
+      }
+    ]
+  },
+  "ritual": [
+    {
+      "at": "2026-09-18T19:57:54.753656+00:00",
+      "kind": "morning",
+      "count": 520,
+      "ok": 518,
+      "crash_free": false,
+      "errors": {
+        "email_511": "Failed to open file 'D:\\\\Downloads\\\\sdoc-hackathon-bundle\\\\attachments\\\\email_511_BL.pdf' as type pdf.\nTraceback (most recent call last):\n  File \"C:\\Users\\lickb\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\site-packages\\pymupdf\\__init__.py\", line 3013, in __init__\n    doc = mupdf.fz_open_document_with_stream_and_dir(suffix, fz_stream, archive.this)\n  File \"C:\\Users\\lickb\\AppData\\Local\\Python\\python",
+        "email_515": "Failed to open file 'D:\\\\Downloads\\\\sdoc-hackathon-bundle\\\\attachments\\\\email_515_BL.pdf' as type pdf.\nTraceback (most recent call last):\n  File \"C:\\Users\\lickb\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\site-packages\\pymupdf\\__init__.py\", line 3013, in __init__\n    doc = mupdf.fz_open_document_with_stream_and_dir(suffix, fz_stream, archive.this)\n  File \"C:\\Users\\lickb\\AppData\\Local\\Python\\python"
+      },
+      "error_count": 2
+    },
+    {
+      "at": "2026-09-18T19:58:52.202234+00:00",
+      "kind": "evening",
+      "count": 520,
+      "ok": 520,
+      "crash_free": true,
+      "errors": {},
+      "error_count": 0
+    }
+  ],
+  "note": "Every cell is extract + exact compare. Equivalent pairs must never defect."
+}

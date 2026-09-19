@@ -1,0 +1,85 @@
+# Label synonyms: left canonical → right aliases (case-insensitive)
+
+shipper:
+  - shipper
+  - consignor
+  - exporter
+  - shipper name
+  - shipper/exporter
+  - shipper (principal or seller)
+
+port_of_loading:
+  - port of loading
+  - port of loading (pol)
+  - load port
+  - pol
+  - loading port
+  - port loading
+  - place of loading
+
+port_of_discharge:
+  - port of discharge
+  - port of discharge (pod)
+  - discharge port
+  - pod
+  - destination port
+  - port discharge
+  - place of discharge
+
+consignee:
+  - consignee
+  - cnee
+  - consigned to
+  - consignee name
+  - consignee (non-negotiable)
+  - to the order of
+
+notify_party:
+  - notify party
+  - notify
+  - also notify
+  - notify address
+  - notify party name
+  - notify party/intermediate consignee
+
+container_count:
+  - no. of containers
+  - number of containers
+  - no of containers or packages
+  - no. of containers or packages
+  - total containers
+  - container count
+  - containers
+  - qty
+  - quantity
+  - packages
+  - no of pkgs
+
+gross_weight_kg:
+  - gross weight
+  - gross weight kg
+  - gross weight (kg)
+  - gross wt
+  - gross wt kgs
+  - gross wt (kgs)
+  - gr. wt
+  - g.w.
+  - g.w
+  - total weight
+  - weight
+  - gr wt
+
+gross_weight:
+  - gross weight
+  - gr. wt
+  - g.w.
+  - total weight
+  - weight
+
+vessel_voyage:
+  - vessel
+  - vessel / voyage
+  - ocean vessel
+  - voyage no
+  - voy
+  - ship name

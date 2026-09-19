@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+.env
+
+# Data (sponsor inbox — not committed; keep demo fixtures for Vercel)
+data/inbox/*
+!data/inbox/demo_*.json
+data/attachments/
+data/backups/
+data/cache/
+data/objects/
+data/submission.json
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+
+# Local HTTPS dev certificate (scripts/serve_https.py)
+certs/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Cursor skill copies — not the product
+.agents/
+
+# Accidental npm leftovers (Bridge ships vendored JS in web/vendor/)
+node_modules/
+
+# Eval artifacts (keep snapshots/ tracked selectively)
+eval/snapshots/*.json
+!eval/snapshots/.gitkeep
+
+# Coverage / cache
+.coverage
+htmlcov/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.vercel
+.env.local
+!.env.example

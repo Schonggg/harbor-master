@@ -1,0 +1,13 @@
+{
+  "subject": "Amendment request for HM-2091",
+  "from": "docs@forwarder.example",
+  "to": [
+    "desk@carrier.example"
+  ],
+  "body": "Please amend the party to be notified on HM-2091 to NORTHSTAR LOGISTICS PTE LTD, attention Ms. Lim. Nothing else changes.",
+  "attachments": [],
+  "meta": {
+    "demo": true,
+    "tag": "amendment_request"
+  }
+}

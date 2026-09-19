@@ -1,0 +1,13 @@
+{
+  "subject": "SI vs BL check \u2014 booking HM-2044",
+  "from": "ops@shipper.example",
+  "to": [
+    "desk@carrier.example"
+  ],
+  "body": "Please reconcile SI and BL draft.\n\n=== SHIPPING INSTRUCTION ===\nConsignee: ACME TRADING CO., LTD.\nNotify Party: SAME AS CONSIGNEE\nPort of Loading: Shanghai\nPort of Discharge: Los Angeles\nNo. of Containers: THREE (3) x 40HC\nGross Weight: 1 MT\nVessel / Voyage: EVER GIVEN / 001E\n\n=== BILL OF LADING DRAFT ===\nConsignee: ACME TRADING INC\nNotify Party: SAME AS CONSIGNEE\nPort of Loading: CNSHA\nPort of Discharge: USLAX\nContainers: 3\nGross Weight: 1000 KGS\nVessel / Voyage: EVER GIVEN / 001E\n",
+  "attachments": [],
+  "meta": {
+    "demo": true,
+    "tag": "booking_confirmation"
+  }
+}

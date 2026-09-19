@@ -1,0 +1,13 @@
+{
+  "subject": "Invoice query: freight charges on HM-2044",
+  "from": "accounts@shipper.example",
+  "to": [
+    "desk@carrier.example"
+  ],
+  "body": "Hi team, the freight invoice for HM-2044 shows THC charged twice. Could you confirm the correct amount before we pay?",
+  "attachments": [],
+  "meta": {
+    "demo": true,
+    "tag": "invoice_or_charges"
+  }
+}

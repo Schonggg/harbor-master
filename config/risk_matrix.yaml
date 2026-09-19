@@ -1,0 +1,64 @@
+# Field risk matrix — seven high-stakes fields
+# exposure_usd is illustrative for demo pricing; tune with ops.
+
+fields:
+  shipper:
+    risk_level: critical
+    exposure_usd: 400000
+    advise: "HOLD — wrong shipper can void cargo liability"
+    weight: 0.95
+
+  consignee:
+    risk_level: critical
+    exposure_usd: 500000
+    advise: "HOLD — wrong consignee can misdeliver cargo"
+    weight: 1.0
+
+  notify_party:
+    risk_level: high
+    exposure_usd: 100000
+    advise: "HOLD unless SAME AS CONSIGNEE resolves"
+    weight: 0.85
+
+  port_of_loading:
+    risk_level: high
+    exposure_usd: 80000
+    advise: "Verify LOCODE / synonym before HOLD"
+    weight: 0.8
+
+  port_of_discharge:
+    risk_level: high
+    exposure_usd: 120000
+    advise: "Misroute risk — confirm LOCODE match"
+    weight: 0.9
+
+  container_count:
+    risk_level: medium
+    exposure_usd: 40000
+    advise: "Extract numeric head; ignore packing prose"
+    weight: 0.6
+
+  gross_weight:
+    risk_level: medium
+    exposure_usd: 35000
+    advise: "Unit-convert MT/LBS/KGS before mismatch"
+    weight: 0.55
+
+  gross_weight_kg:
+    risk_level: medium
+    exposure_usd: 35000
+    advise: "Unit-convert MT/LBS/KGS before mismatch (≤1kg)"
+    weight: 0.55
+
+  vessel_voyage:
+    risk_level: medium
+    exposure_usd: 25000
+    advise: "PILOT if OCR source and near-miss"
+    weight: 0.5
+
+defaults:
+  unknown_field:
+    risk_level: low
+    exposure_usd: 5000
+    advise: "PILOT — unpriced field"
+    weight: 0.3

@@ -1,0 +1,16 @@
+.git
+.venv
+venv
+node_modules
+__pycache__
+*.pyc
+.env
+data/*.db
+data/cache
+data/backups
+data/submission.json
+.pytest_cache
+.ruff_cache
+htmlcov
+certs
+eval/snapshots

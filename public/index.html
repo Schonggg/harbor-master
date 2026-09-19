@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <title>Harbormaster · Worldwide Hubs</title>
+  <meta name="description" content="Three verdicts. One standard of work. The LLM extracts. It never sits on the bench." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500&family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css?v=25" />
+  <script type="importmap">
+  { "imports": { "three": "./vendor/three.module.min.js" } }
+  </script>
+  <script src="./vendor/gsap.min.js"></script>
+</head>
+<body>
+  <canvas id="sea" aria-hidden="true"></canvas>
+  <div class="horizon" id="horizon" aria-hidden="true"></div>
+  <div class="fog fog-far" id="fog-far" aria-hidden="true"></div>
+  <div class="fog fog-near" id="fog-near" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="spot" id="spot" aria-hidden="true"></div>
+  <div class="busy" id="busy" aria-hidden="true"><i></i></div>
+
+  <div class="boot" id="boot" aria-hidden="true">
+    <div class="boot-inner">
+      <p class="boot-kicker">OFFICES</p>
+      <h1 class="boot-mark">Three<br><em>verdicts.</em></h1>
+      <p class="boot-line">One standard of work.</p>
+    </div>
+  </div>
+
+  <div class="shell">
+    <header class="top" id="top">
+      <a class="brand" href="#/board" aria-label="Harbormaster Bridge">
+        <span class="wordmark">HARBORMASTER</span>
+      </a>
+      <p class="est">EST. 2026 — WORLDWIDE</p>
+      <div class="counters" aria-label="Global verdict counts">
+        <div class="counter v-CLEAR"><b id="c-clear">0</b><span>CLEAR</span></div>
+        <div class="counter v-HOLD"><b id="c-hold">0</b><span>HOLD</span></div>
+        <div class="counter v-PILOT"><b id="c-pilot">0</b><span>PILOT</span></div>
+      </div>
+      <div class="top-actions">
+        <span class="mode" id="mode">CONNECTING</span>
+        <button type="button" class="btn btn-sm" id="btn-reset">Refresh</button>
+        <button type="button" class="btn btn-sm btn-primary" id="btn-seed">Load inbox <span class="arrow">→</span></button>
+      </div>
+    </header>
+
+    <nav class="tabs" id="tabs" aria-label="Bridge views">
+      <span class="indicator" aria-hidden="true"></span>
+      <button type="button" data-view="board"><kbd>1</kbd>Board</button>
+      <button type="button" data-view="court"><kbd>2</kbd>Court</button>
+      <button type="button" data-view="pilot"><kbd>3</kbd>Pilot <span class="badge" id="pilot-badge" hidden>0</span></button>
+      <button type="button" data-view="ledger"><kbd>4</kbd>Ledger</button>
+      <button type="button" data-view="chaos"><kbd>5</kbd>Chaos</button>
+      <button type="button" data-view="metrics"><kbd>6</kbd>Metrics</button>
+    </nav>
+
+    <main id="view" class="view-root" aria-live="polite"></main>
+
+    <footer class="foot-note">
+      <span>Three-state verdict: <code>CLEAR</code> release · <code>HOLD</code> stop · <code>PILOT</code> human. The LLM extracts. It never sits on the bench.</span>
+      <span id="sys-status">System starting…</span>
+      <span>Keys: 1–6 switch views · R replay court · Esc close detail</span>
+    </footer>
+  </div>
+
+  <div class="drawer-backdrop" id="drawer-backdrop"></div>
+  <aside class="drawer" id="drawer" aria-hidden="true" role="dialog" aria-label="Case detail"></aside>
+  <div class="toast-stack" id="toasts" aria-live="assertive"></div>
+
+  <noscript>Harbormaster Bridge needs JavaScript.</noscript>
+  <script type="module" src="./app.js?v=42"></script>
+</body>
+</html>

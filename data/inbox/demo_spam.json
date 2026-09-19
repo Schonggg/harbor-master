@@ -1,0 +1,13 @@
+{
+  "subject": "Weekly marketing rates: Asia to Europe",
+  "from": "promo@ratesblast.example",
+  "to": [
+    "desk@carrier.example"
+  ],
+  "body": "Special marketing rates this week on all Asia to Europe lanes! Click here to unsubscribe from future updates.",
+  "attachments": [],
+  "meta": {
+    "demo": true,
+    "tag": "operational_noise"
+  }
+}

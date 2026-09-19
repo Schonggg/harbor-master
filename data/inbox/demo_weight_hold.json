@@ -1,0 +1,13 @@
+{
+  "subject": "SI vs BL check \u2014 booking HM-2088",
+  "from": "docs@forwarder.example",
+  "to": [
+    "desk@carrier.example"
+  ],
+  "body": "Draft attached below, please verify.\n\n=== SHIPPING INSTRUCTION ===\nConsignee: AURORA MINERALS PTY LTD\nNotify Party: SAME AS CONSIGNEE\nPort of Loading: Brisbane\nPort of Discharge: Singapore\nNo. of Containers: 2\nGross Weight: 18400 KGS\nVessel / Voyage: MSC ISABELLA / 12W\n\n=== BILL OF LADING DRAFT ===\nConsignee: AURORA MINERALS PTY LTD\nNotify Party: SAME AS CONSIGNEE\nPort of Loading: Brisbane\nPort of Discharge: Singapore\nContainers: 2\nGross Weight: 14800 KGS\nVessel / Voyage: MSC ISABELLA / 12W\n",
+  "attachments": [],
+  "meta": {
+    "demo": true,
+    "tag": "shipping_instruction"
+  }
+}

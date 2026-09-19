@@ -1,0 +1,30 @@
+# Autonomy dial reads these. API /autonomy can override at runtime.
+
+# Field extraction confidence below this → force PILOT for that field
+extract_min_confidence: 0.75
+
+# Court: if both sides confident and strategies fail → MISMATCH (HOLD)
+# If either side soft → UNCERTAIN (PILOT)
+match_confidence_floor: 0.92
+uncertain_band: 0.08
+
+# Official two-value judge: grey-zone fuzzy scores at/above this → MATCH
+fuzzy_match_threshold: 0.92
+
+# Scout routing
+scout_rule_confidence: 0.95
+scout_llm_min_confidence: 0.70
+scout_unknown_below: 0.55
+unreadable_min_chars: 40
+
+# Autonomy presets (UI dial maps 0–100 → these)
+presets:
+  cautious:
+    match_confidence_floor: 0.97
+    uncertain_band: 0.12
+  balanced:
+    match_confidence_floor: 0.92
+    uncertain_band: 0.08
+  aggressive:
+    match_confidence_floor: 0.85
+    uncertain_band: 0.05

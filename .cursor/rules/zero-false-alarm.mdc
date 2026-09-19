@@ -1,0 +1,17 @@
+---
+description: Official L5 compare must never false-alarm. Scoring is asymmetric.
+alwaysApply: true
+---
+
+# Zero false alarms
+
+A missed defect can still leave a record standing. A false alarm zeros that record.
+
+When changing `src/harbormaster/official/compare.py` or adding a normalize rule:
+
+1. First ask whether the rule can turn two writings of the same fact into a mismatch.
+2. Add the equivalent pair to `EQUIVALENT` in `official/matrix.py` and keep `would_false_alarm` false.
+3. Keep a real discrepancy in `NEAR_MISS` so the rule still fires on true differences.
+4. Do not add fuzzy matching, similarity, thresholds, or a third compare state.
+
+`tests/test_format_matrix.py` and `tests/test_zero_false_alarm.py` must stay green.

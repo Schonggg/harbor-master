@@ -1,0 +1,13 @@
+{
+  "subject": "SI vs BL check \u2014 booking HM-2073",
+  "from": "ops@shipper.example",
+  "to": [
+    "desk@carrier.example"
+  ],
+  "body": "Please reconcile before release.\n\n=== SHIPPING INSTRUCTION ===\nConsignee: PACIFIC RIM IMPORTS LLC\nNotify Party: SAME AS CONSIGNEE\nPort of Loading: Shanghai\nPort of Discharge: Los Angeles\nNo. of Containers: 3\nGross Weight: 22000 KGS\nVessel / Voyage: EVER GIVEN / 001E\n\n=== BILL OF LADING DRAFT ===\nConsignee: PACIFIC RIM IMPORTS LLC\nNotify Party: SAME AS CONSIGNEE\nPort of Loading: Shanghai\nPort of Discharge: Los Angeles\nContainers: 4\nGross Weight: 22000 KGS\nVessel / Voyage: EVER GIVEN / 001E\n",
+  "attachments": [],
+  "meta": {
+    "demo": true,
+    "tag": "shipping_instruction"
+  }
+}

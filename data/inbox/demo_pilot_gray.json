@@ -1,0 +1,14 @@
+{
+  "subject": "OCR scan \u2014 vessel name unclear HM-2102",
+  "from": "scan@ops.example",
+  "to": [
+    "desk@carrier.example"
+  ],
+  "body": "Scanned SI vs typed BL \u2014 please pilot.\n\n=== SHIPPING INSTRUCTION ===\nConsignee: HARBOR GATE CO LTD\nNotify Party: Harbor Gate Co Ltd\nPort of Loading: Busan\nPort of Discharge: Long Beach\nNo. of Containers: FIVE (5) x 20GP\nGross Weight: 12.5 MT\nVessel / Voyage: ONE HANOI / 088E\n\n=== BILL OF LADING DRAFT ===\nConsignee: HARBOR GATE CO LTD\nNotify Party: Harbor Gate Co Ltd\nPort of Loading: Busan\nPort of Discharge: Long Beach\nContainers: 5\nGross Weight: 12500 KGS\nVessel / Voyage: 0NE HAN0I / 088E\n",
+  "attachments": [],
+  "meta": {
+    "demo": true,
+    "tag": "discrepancy_query",
+    "soft": true
+  }
+}

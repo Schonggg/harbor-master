@@ -1,0 +1,37 @@
+# Corporate / legal suffixes stripped during entity compare (order matters: longer first)
+
+suffixes:
+  - CORPORATION
+  - INCORPORATED
+  - COMPANY LIMITED
+  - CO., LTD.
+  - CO.,LTD.
+  - CO. LTD.
+  - CO LTD
+  - PTE. LTD.
+  - PTE LTD
+  - PTY LTD
+  - PTY. LTD.
+  - LIMITED
+  - LTD.
+  - LTD
+  - L.L.C.
+  - LLC
+  - INC.
+  - INC
+  - CORP.
+  - CORP
+  - GMBH
+  - S.A.
+  - SA
+  - BV
+  - NV
+  - AG
+  - PLC
+  - LLP
+  - LP
+
+# Characters ignored when normalizing entity names
+strip_chars: ".,\"'()/"
+normalize_ampersand: true   # & → AND
+collapse_whitespace: true

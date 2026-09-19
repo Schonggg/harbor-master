@@ -1,0 +1,20 @@
+---
+description: After code changes, deploy Harbormaster to the linked Vercel production project.
+alwaysApply: true
+---
+
+# Vercel production deploy
+
+Public site: https://harbormaster-1.vercel.app/
+Dashboard: https://vercel.com/honlb2007-3626s-projects/harbormaster-1
+Project: `harbormaster-1` (`prj_jbxhtkfYh954YIDSPurjHf3ZDvtA`)
+
+When you finish implementing or fixing something in this repo, also ship it:
+
+```
+npx vercel --prod --yes
+```
+
+from the repo root, with the linked `.vercel/project.json`. Do not create a new Vercel project. Do not commit `.env` or secrets.
+
+If deploy warns that `functions.memory` is ignored, leave `memory` out of `vercel.json`. Keep `maxDuration` only.

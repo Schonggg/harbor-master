@@ -1,0 +1,14 @@
+{
+  "subject": "OCR scan \u2014 vessel name unclear HM-2107",
+  "from": "scan@ops.example",
+  "to": [
+    "desk@carrier.example"
+  ],
+  "body": "Scanned SI vs typed BL \u2014 same sailing as HM-2102.\n\n=== SHIPPING INSTRUCTION ===\nConsignee: MERIDIAN TEXTILES PTY LTD\nNotify Party: SAME AS CONSIGNEE\nPort of Loading: Busan\nPort of Discharge: Long Beach\nNo. of Containers: TWO (2) x 40HC\nGross Weight: 19.2 MT\nVessel / Voyage: ONE HANOI / 088E\n\n=== BILL OF LADING DRAFT ===\nConsignee: MERIDIAN TEXTILES PTY LTD\nNotify Party: SAME AS CONSIGNEE\nPort of Loading: Busan\nPort of Discharge: Long Beach\nContainers: 2\nGross Weight: 19200 KGS\nVessel / Voyage: 0NE HAN0I / 088E\n",
+  "attachments": [],
+  "meta": {
+    "demo": true,
+    "tag": "discrepancy_query",
+    "soft": true
+  }
+}

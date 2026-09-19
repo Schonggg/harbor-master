@@ -1,0 +1,14 @@
+{
+  "subject": "OCR scan \u2014 vessel unclear HM-2118",
+  "from": "scan@ops.example",
+  "to": [
+    "desk@carrier.example"
+  ],
+  "body": "Scanned SI vs typed BL \u2014 please pilot.\n\n=== SHIPPING INSTRUCTION ===\nConsignee: RIVERBEND FOODS INC\nNotify Party: SAME AS CONSIGNEE\nPort of Loading: Ningbo\nPort of Discharge: Melbourne\nNo. of Containers: 4\nGross Weight: 61200 KGS\nVessel / Voyage: HMM ALGECIRAS / 0012W\n\n=== BILL OF LADING DRAFT ===\nConsignee: RIVERBEND FOODS INC\nNotify Party: SAME AS CONSIGNEE\nPort of Loading: Ningbo\nPort of Discharge: Melbourne\nContainers: 4\nGross Weight: 61200 KGS\nVessel / Voyage: HMM ALGEC1RAS / 0012W\n",
+  "attachments": [],
+  "meta": {
+    "demo": true,
+    "tag": "discrepancy_query",
+    "soft": true
+  }
+}

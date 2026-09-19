@@ -1,0 +1,14 @@
+{
+  "status": "generator_not_in_tree",
+  "talking_point": "We do not memorize one frozen inbox. Given the sponsor generator we re-run python3 generate.py --seed N --out <dir> and score each corpus after the pipeline, never importing ground_truth.json into scoring code paths.",
+  "generator": null,
+  "seeds": [],
+  "score_variance": null,
+  "local_reproducibility": {
+    "ok": true,
+    "count": 14,
+    "errors": {}
+  },
+  "note": "generate.py was not found. Set HARBORMASTER_GENERATOR or drop it next to the repo. Local demo corpus still checks that two rules-only runs are identical.",
+  "command": "python3 generate.py --seed 7 --out /tmp/test_seed7"
+}

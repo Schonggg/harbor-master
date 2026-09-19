@@ -1,0 +1,13 @@
+{
+  "subject": "Booking confirmation HM-2130 Shanghai to Melbourne",
+  "from": "bookings@carrier.example",
+  "to": [
+    "ops@shipper.example"
+  ],
+  "body": "Your space is confirmed for 2 x 40HC sailing 12 Oct. Documentation cut-off is 10 Oct 17:00 local.",
+  "attachments": [],
+  "meta": {
+    "demo": true,
+    "tag": "booking_confirmation"
+  }
+}
