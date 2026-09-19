@@ -1,7 +1,7 @@
 // ⑥ Metrics + autonomy dial — false alarms as the hero number, confusion matrix,
 // field-level agreement, and a live what-if dial over the match-confidence floor.
-import { store as bridgeStore } from "../lib/store.js?v=52";
-import { esc, $, $$, on, clamp } from "../lib/dom.js";
+import { store as bridgeStore } from "../lib/store.js?v=53";
+import { esc, $, $$, on } from "../lib/dom.js";
 import { enter, countTo } from "../lib/motion.js";
 import { FIELD_ORDER, fieldZh, fieldEn, PRESETS } from "../lib/copy.js";
 
@@ -37,7 +37,7 @@ export function mount(root, ctx) {
           <div class="dial-controls">
             <div class="dial-value"><b id="dial-v">${floor.toFixed(2)}</b><span>Same SI/BL evidence. Raise the floor and leftover mismatches with extract confidence below it leave HOLD and join Pilot.</span></div>
             <input type="range" class="dial" id="dial" min="0.60" max="0.98" step="0.01" value="${floor}" aria-label="Confidence floor" />
-            <div class="dial-scale"><span>0.60 hold more</span><span>0.80</span><span>0.98 hand more to humans</span></div>
+            <div class="dial-scale"><span style="--at:0">0.60 hold more</span><span style="--at:52.6316">0.80</span><span style="--at:100">0.98 hand more to humans</span></div>
             <div class="presets">${Object.entries(PRESETS).map(([k, p]) => `<button type="button" class="btn btn-sm" data-preset="${k}">${p.zh} · ${p.floor}</button>`).join("")}</div>
             <div class="dial-stats" id="dial-stats"></div>
             <div class="dial-actions">
@@ -356,13 +356,18 @@ export function mount(root, ctx) {
     const Yp = (n) => 96 - (n / maxPilot) * 84;
     const path = (fn, Y) => pts.map((p, i) => `${i ? "L" : "M"}${X(p.f).toFixed(1)},${Y(fn(p)).toFixed(1)}`).join(" ");
     const grid = [0, 0.25, 0.5, 0.75, 1].map((g) => `<line class="grid" x1="14" x2="194" y1="${96 - g * 84}" y2="${96 - g * 84}" />`).join("");
-    const ticks = [0.6, 0.7, 0.8, 0.9, 0.98].map((t) => `<text x="${X(t) - 5}" y="106">${t.toFixed(2)}</text>`).join("");
+    const ticks = [0.6, 0.7, 0.8, 0.9, 0.98].map((t) => {
+      const anchor = t <= 0.61 ? "start" : t >= 0.97 ? "end" : "middle";
+      return `<text x="${X(t).toFixed(1)}" y="106" text-anchor="${anchor}">${t.toFixed(2)}</text>`;
+    }).join("");
+    const fx = X(floor);
+    const floorAnchor = floor <= 0.64 ? "start" : floor >= 0.94 ? "end" : "middle";
     svg.innerHTML = `
       ${grid}${ticks}
       <path class="auto" d="${path((p) => p.HOLD, Yh)}" />
       <path class="pilot" d="${path((p) => p.PILOT, Yp)}" />
-      <line class="cur" x1="${X(floor)}" x2="${X(floor)}" y1="8" y2="96" />
-      <text x="${clamp(X(floor) - 12, 14, 160)}" y="6" style="fill:var(--signal)">floor ${floor.toFixed(2)}</text>
+      <line class="cur" x1="${fx}" x2="${fx}" y1="8" y2="96" />
+      <text x="${fx.toFixed(1)}" y="6" text-anchor="${floorAnchor}" style="fill:var(--signal)">floor ${floor.toFixed(2)}</text>
       <text x="148" y="14" style="fill:var(--hold)">HOLD count</text>
       <text x="148" y="20" style="fill:var(--pilot)">Pilot count</text>`;
   }

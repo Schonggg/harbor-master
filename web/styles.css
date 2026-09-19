@@ -1993,7 +1993,22 @@ input[type="range"].dial::-moz-range-thumb {
   box-shadow: 0 0 0 2px var(--signal);
   cursor: grab;
 }
-.dial-scale { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.66rem; color: var(--text-3); }
+.dial-scale {
+  position: relative;
+  height: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  color: var(--text-3);
+}
+.dial-scale span {
+  position: absolute;
+  top: 0;
+  left: calc(var(--at) * 1%);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+.dial-scale span:first-child { transform: none; }
+.dial-scale span:last-child { transform: translateX(-100%); }
 .dial-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; }
 .dial-stat { padding: 0.8rem 0.9rem; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.025); display: grid; gap: 0.2rem; }
 .dial-stat small { font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.14em; color: var(--text-3); }

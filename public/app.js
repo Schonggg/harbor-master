@@ -1,15 +1,15 @@
 // Harbormaster Bridge — shell: routing, store wiring, header, drawer, toasts.
-import { store } from "./lib/store.js?v=52";
+import { store } from "./lib/store.js?v=53";
 import { mountScene, scene } from "./lib/scene.js?v=13";
 import { $, $$, h, esc } from "./lib/dom.js";
 import { gsap, reduced, swapView, countTo, pulse, mountSpotlight, playBoot, mountParallax } from "./lib/motion.js?v=15";
-import { renderDetail } from "./views/detail.js?v=52";
-import * as board from "./views/board.js?v=52";
-import * as court from "./views/court.js?v=52";
-import * as ledger from "./views/ledger.js?v=52";
-import * as chaos from "./views/chaos.js?v=52";
-import * as metrics from "./views/metrics.js?v=52";
-import * as pilot from "./views/pilot.js?v=52";
+import { renderDetail } from "./views/detail.js?v=53";
+import * as board from "./views/board.js?v=53";
+import * as court from "./views/court.js?v=53";
+import * as ledger from "./views/ledger.js?v=53";
+import * as chaos from "./views/chaos.js?v=53";
+import * as metrics from "./views/metrics.js?v=53";
+import * as pilot from "./views/pilot.js?v=53";
 
 const VIEWS = { board, court, pilot, ledger, chaos, metrics };
 const ORDER = Object.keys(VIEWS);
