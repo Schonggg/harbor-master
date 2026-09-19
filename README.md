@@ -51,7 +51,7 @@ Of the 220 comparison cases: **148 OK**, **52 MISMATCH**, **20 NEEDS_REVIEW**.
 
 **Reader.** Image-only PDFs go to VisionParser. A short labelled PDF still uses PdfParser (`pdf_has_text` min 1 character) so the 220-cell format matrix stays green. DOCX tables are flattened to `label: value` lines. PDF labels on their own line ("To the Order of" then the company) are read as the next line.
 
-**Bridge (already on the public site).** Board **Find** (`/` to focus): email number (`12` or `email_012`) and keywords over subject / verdict / extracted fields. Full-width paper strip. Pilot Chaos / Lock to Ledger filters, Source-mail 15s timeout, HOLD-strictness dial, mild card tilt. Cache lockstep: `app.js?v=51` and `store.js?v=51`, `styles.css?v=33`.
+**Bridge (already on the public site).** Board **Find** (`/` to focus): email number (`12` or `email_012`) and keywords over subject / verdict / extracted fields. Dark olive instrument rail, not a cream card. Pilot Chaos / Lock to Ledger filters, Source-mail 15s timeout, HOLD-strictness dial, mild card tilt. Cache lockstep: `app.js?v=51` and `store.js?v=51`, `styles.css?v=34`.
 
 **Tests.** `py -3 -m pytest -q` is **122 passed**. Official competition `final_score` is still unknown until `make submit` reaches the organizers' inbox.
 
@@ -133,7 +133,7 @@ Header buttons are **Refresh** and **Load inbox**. Load inbox fills at most one 
 
 **Board cards.** Mild mouse-follow tilt. Every view must import `store.js` with the same `?v=` as `app.js` in `web/index.html`. A mismatch creates two stores and the board looks empty while the header still counts 520.
 
-**Cache.** After a UI change, bump that `?v=` lockstep (`app.js` / `store.js` currently `?v=51`, `styles.css` `?v=33`), run `py -3 scripts/vercel_build.py`, then deploy. Do not hard-refresh only `index.html`.
+**Cache.** After a UI change, bump that `?v=` lockstep (`app.js` / `store.js` currently `?v=51`, `styles.css` `?v=34`), run `py -3 scripts/vercel_build.py`, then deploy. Do not hard-refresh only `index.html`.
 
 The frontend (`web/`) is static - no build step. Three.js and GSAP are vendored. If the API is unreachable, the Bridge falls back to **offline replay** from `web/lib/demo-data.js`. That 14-email snapshot is **not** mixed into the live 520 board.
 
