@@ -1,5 +1,5 @@
 {
-  "recorded_at": "2026-09-19T12:28:30.415945+00:00",
+  "recorded_at": "2026-09-19T12:48:01.865481+00:00",
   "baseline": {
     "stage1_macro_f1": 0.563,
     "stage3_defect_f1": 0.655,
@@ -11,8 +11,10 @@
   "count": 520,
   "submission": "D:\\Monash Hackathon\\harbormaster\\data\\submission.json",
   "scoreboard": {
-    "error": "Official scorer not found. Unzip sdoc-hackathon-docker next to the repo or set SDOC_DOCKER / SDOC_GROUND_TRUTH. Pipeline code does not ship gold labels."
+    "stdout": "==============================================================\n  SDOC HACKATHON SCORE  —  submission.json\n  520 emails\n==============================================================\n\nSTAGE 1 · Email classification\n  accuracy      1.000  ████████████████████████\n  macro-F1      1.000  ████████████████████████\n  resolved by rules (cost): 100%\n\n  per-category  precision / recall / f1\n    BL_COMPARISON   1.00 / 1.00 / 1.00\n    SI_REQUEST      1.00 / 1.00 / 1.00\n    INVOICE_QUERY   1.00 / 1.00 / 1.00\n    GENERAL         1.00 / 1.00 / 1.00\n    SPAM            1.00 / 1.00 / 1.00\n\nSTAGE 3 · BL-vs-SI comparison  (comparable doc emails)\n  defect recall     1.000  ████████████████████████\n  defect precision  1.000  ████████████████████████\n  field-level F1    1.000  ████████████████████████\n  exact-match rate  1.000\n\nRELIABILITY · escalate what you can't decide  (diagnostic)\n  escalation recall     1.000  ████████████████████████\n  escalation precision  1.000  ████████████████████████\n  gold NEEDS_REVIEW: 20   flagged: 20\n    wrong_doc_type       5/5 escalated\n    missing_attachment   5/5 escalated\n    unreadable           5/5 escalated\n    missing_value        5/5 escalated\n\nEND-TO-END · the headline metric\n  46/46 defect emails caught end to end\n  rate  1.000  ████████████████████████\n\n--------------------------------------------------------------\n  FINAL SCORE  1.0000   (w: s1=0.3, s3=0.2, e2e=0.5)\n--------------------------------------------------------------\n",
+    "returncode": 0,
+    "scorer": "D:\\Downloads\\sdoc-hackathon-docker\\server\\score_cli.py"
   },
-  "scorer": "",
-  "ground_truth": ""
+  "scorer": "D:\\Downloads\\sdoc-hackathon-docker\\server\\score_cli.py",
+  "ground_truth": "D:\\Downloads\\sdoc-hackathon-docker\\data_v2\\ground_truth.json"
 }

@@ -18,6 +18,12 @@ _WEIGHT = re.compile(r"[\d,.]+")
 _COUNT = re.compile(r"(\d+)")
 _LOCODE = re.compile(r"\([^)]*\)")
 _PUNCT = re.compile(r"[^\w\s]", re.UNICODE)
+_PARTY_PREFIX = re.compile(
+    r"^(?:party/?\s*intermediate\s*consignee(?:\s*\([^)]*\))?|"
+    r"\(?non[-\s]?negotiable\)?)\s*:?\s*",
+    re.I,
+)
+_PIPE_TAIL = re.compile(r"\s*\|.*$", re.S)
 
 
 class CompareOutcome(str, Enum):
@@ -52,6 +58,8 @@ def normalize(field: str, raw: str) -> str | int | None:
     if field in {"port_of_loading", "port_of_discharge"}:
         return fold(_LOCODE.sub(" ", text))
     if field in {"shipper", "consignee", "notify_party"}:
+        text = _PARTY_PREFIX.sub("", text).strip()
+        text = _PIPE_TAIL.sub("", text).strip()
         return fold(text)
     return fold(text)
 

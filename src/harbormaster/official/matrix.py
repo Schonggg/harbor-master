@@ -28,8 +28,8 @@ GOLD = {
 
 # Same facts, different writing. L5 must still MATCH — these are the false-alarm traps.
 EQUIVALENT = {
-    "shipper": "ACME TRADING CO LTD",
-    "consignee": "Beta Imports Pte Ltd",
+    "shipper": "ACME TRADING CO LTD | 1 RAFFLES PLACE, SINGAPORE",
+    "consignee": "(Non-Negotiable) Beta Imports Pte Ltd",
     "notify_party": "same as consignee",
     "port_of_loading": "shanghai",
     "port_of_discharge": "los angeles",

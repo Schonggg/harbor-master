@@ -166,3 +166,27 @@ def test_si_request_commits_above_rule_floor_without_llm():
     assert routed.category == Category.SI_REQUEST
     assert routed.route == "rules"
     assert routed.confidence >= runtime_thresholds().scout_rule_confidence
+
+
+def test_rpa_billing_process_is_general_not_invoice():
+    email = _email(
+        "rpa_billing",
+        "_RPA_ India HSS SD Billing Process Completed - LE HAVRE",
+        "This is an automated notification. The India HSS SD Billing Process "
+        "has completed successfully. No action required. -- RPA Bot",
+    )
+    got = official_rule_classify(email)
+    assert got and got.category == Category.GENERAL, got
+    assert _route(email).category == Category.GENERAL
+
+
+def test_advance_fee_phishing_with_invoice_subject_is_spam():
+    email = _email(
+        "phish_invoice",
+        "Re: Invoice payment - kindly confirm your bank details",
+        "Hello Dear, I am a bank officer with an urgent business proposal "
+        "involving USD 4.5 million. Please reply with your bank details to proceed.",
+    )
+    got = official_rule_classify(email)
+    assert got and got.category == Category.SPAM, got
+    assert _route(email).category == Category.SPAM

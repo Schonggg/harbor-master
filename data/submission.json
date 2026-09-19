@@ -165,7 +165,7 @@
     "decided_by": "rule"
   },
   "email_021": {
-    "category": "INVOICE_QUERY",
+    "category": "GENERAL",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -448,14 +448,10 @@
   },
   "email_055": {
     "category": "BL_COMPARISON",
-    "status": "MISMATCH",
+    "status": "OK",
     "review_reason": null,
-    "has_defect": true,
-    "defect_fields": [
-      "shipper",
-      "consignee",
-      "notify_party"
-    ],
+    "has_defect": false,
+    "defect_fields": [],
     "decided_by": "rule"
   },
   "email_056": {
@@ -484,12 +480,10 @@
   },
   "email_059": {
     "category": "BL_COMPARISON",
-    "status": "MISMATCH",
+    "status": "OK",
     "review_reason": null,
-    "has_defect": true,
-    "defect_fields": [
-      "consignee"
-    ],
+    "has_defect": false,
+    "defect_fields": [],
     "decided_by": "rule"
   },
   "email_060": {
@@ -619,7 +613,7 @@
     "decided_by": "rule"
   },
   "email_075": {
-    "category": "INVOICE_QUERY",
+    "category": "GENERAL",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -627,7 +621,7 @@
     "decided_by": "rule"
   },
   "email_076": {
-    "category": "INVOICE_QUERY",
+    "category": "GENERAL",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -802,16 +796,13 @@
     "review_reason": null,
     "has_defect": true,
     "defect_fields": [
-      "shipper",
-      "consignee",
-      "notify_party",
       "container_count",
       "gross_weight_kg"
     ],
     "decided_by": "rule"
   },
   "email_098": {
-    "category": "INVOICE_QUERY",
+    "category": "GENERAL",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -888,9 +879,7 @@
     "review_reason": null,
     "has_defect": true,
     "defect_fields": [
-      "shipper",
       "consignee",
-      "notify_party",
       "container_count"
     ],
     "decided_by": "rule"
@@ -962,7 +951,7 @@
     "decided_by": "rule"
   },
   "email_116": {
-    "category": "GENERAL",
+    "category": "SPAM",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -970,7 +959,7 @@
     "decided_by": "rule"
   },
   "email_117": {
-    "category": "INVOICE_QUERY",
+    "category": "GENERAL",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -1118,7 +1107,7 @@
     "decided_by": "rule"
   },
   "email_134": {
-    "category": "GENERAL",
+    "category": "SPAM",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -1182,7 +1171,7 @@
     "decided_by": "rule"
   },
   "email_142": {
-    "category": "INVOICE_QUERY",
+    "category": "GENERAL",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -1323,7 +1312,7 @@
     "decided_by": "rule"
   },
   "email_159": {
-    "category": "INVOICE_QUERY",
+    "category": "GENERAL",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -1611,7 +1600,7 @@
     "decided_by": "rule"
   },
   "email_194": {
-    "category": "INVOICE_QUERY",
+    "category": "GENERAL",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -1724,12 +1713,10 @@
   },
   "email_208": {
     "category": "BL_COMPARISON",
-    "status": "MISMATCH",
+    "status": "OK",
     "review_reason": null,
-    "has_defect": true,
-    "defect_fields": [
-      "consignee"
-    ],
+    "has_defect": false,
+    "defect_fields": [],
     "decided_by": "rule"
   },
   "email_209": {
@@ -1813,7 +1800,7 @@
     "decided_by": "rule"
   },
   "email_219": {
-    "category": "INVOICE_QUERY",
+    "category": "GENERAL",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -1871,7 +1858,7 @@
     "decided_by": "rule"
   },
   "email_226": {
-    "category": "GENERAL",
+    "category": "SPAM",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -1919,7 +1906,7 @@
     "decided_by": "rule"
   },
   "email_232": {
-    "category": "INVOICE_QUERY",
+    "category": "GENERAL",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -2082,7 +2069,7 @@
     "decided_by": "rule"
   },
   "email_252": {
-    "category": "INVOICE_QUERY",
+    "category": "GENERAL",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -2256,12 +2243,10 @@
   },
   "email_273": {
     "category": "BL_COMPARISON",
-    "status": "MISMATCH",
+    "status": "OK",
     "review_reason": null,
-    "has_defect": true,
-    "defect_fields": [
-      "consignee"
-    ],
+    "has_defect": false,
+    "defect_fields": [],
     "decided_by": "rule"
   },
   "email_274": {
@@ -2406,9 +2391,7 @@
     "review_reason": null,
     "has_defect": true,
     "defect_fields": [
-      "shipper",
       "consignee",
-      "notify_party",
       "container_count"
     ],
     "decided_by": "rule"
@@ -2454,7 +2437,7 @@
     "decided_by": "rule"
   },
   "email_297": {
-    "category": "INVOICE_QUERY",
+    "category": "GENERAL",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -2502,9 +2485,6 @@
     "review_reason": null,
     "has_defect": true,
     "defect_fields": [
-      "shipper",
-      "consignee",
-      "notify_party",
       "container_count"
     ],
     "decided_by": "rule"
@@ -2676,7 +2656,7 @@
     "decided_by": "rule"
   },
   "email_323": {
-    "category": "INVOICE_QUERY",
+    "category": "GENERAL",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -2727,7 +2707,7 @@
     "decided_by": "rule"
   },
   "email_329": {
-    "category": "GENERAL",
+    "category": "SPAM",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -2818,7 +2798,7 @@
     "decided_by": "rule"
   },
   "email_340": {
-    "category": "INVOICE_QUERY",
+    "category": "GENERAL",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -2861,7 +2841,7 @@
     "decided_by": "rule"
   },
   "email_345": {
-    "category": "GENERAL",
+    "category": "SPAM",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -2941,8 +2921,6 @@
     "review_reason": null,
     "has_defect": true,
     "defect_fields": [
-      "shipper",
-      "consignee",
       "notify_party",
       "gross_weight_kg"
     ],
@@ -2957,7 +2935,7 @@
     "decided_by": "rule"
   },
   "email_356": {
-    "category": "INVOICE_QUERY",
+    "category": "GENERAL",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -3016,7 +2994,7 @@
     "decided_by": "rule"
   },
   "email_363": {
-    "category": "GENERAL",
+    "category": "SPAM",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -3040,7 +3018,7 @@
     "decided_by": "rule"
   },
   "email_366": {
-    "category": "INVOICE_QUERY",
+    "category": "GENERAL",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -3210,7 +3188,7 @@
     "decided_by": "rule"
   },
   "email_387": {
-    "category": "GENERAL",
+    "category": "SPAM",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -3234,7 +3212,7 @@
     "decided_by": "rule"
   },
   "email_390": {
-    "category": "GENERAL",
+    "category": "SPAM",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -3266,7 +3244,7 @@
     "decided_by": "rule"
   },
   "email_394": {
-    "category": "INVOICE_QUERY",
+    "category": "GENERAL",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -3282,7 +3260,7 @@
     "decided_by": "rule"
   },
   "email_396": {
-    "category": "INVOICE_QUERY",
+    "category": "GENERAL",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -3306,7 +3284,7 @@
     "decided_by": "rule"
   },
   "email_399": {
-    "category": "INVOICE_QUERY",
+    "category": "GENERAL",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -3346,7 +3324,7 @@
     "decided_by": "rule"
   },
   "email_404": {
-    "category": "GENERAL",
+    "category": "SPAM",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -3371,12 +3349,10 @@
   },
   "email_407": {
     "category": "BL_COMPARISON",
-    "status": "MISMATCH",
+    "status": "OK",
     "review_reason": null,
-    "has_defect": true,
-    "defect_fields": [
-      "consignee"
-    ],
+    "has_defect": false,
+    "defect_fields": [],
     "decided_by": "rule"
   },
   "email_408": {
@@ -3456,7 +3432,7 @@
     "decided_by": "rule"
   },
   "email_417": {
-    "category": "INVOICE_QUERY",
+    "category": "SPAM",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -3610,9 +3586,6 @@
     "review_reason": null,
     "has_defect": true,
     "defect_fields": [
-      "shipper",
-      "consignee",
-      "notify_party",
       "gross_weight_kg"
     ],
     "decided_by": "rule"
@@ -3658,7 +3631,7 @@
     "decided_by": "rule"
   },
   "email_441": {
-    "category": "INVOICE_QUERY",
+    "category": "GENERAL",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -3722,7 +3695,7 @@
     "decided_by": "rule"
   },
   "email_449": {
-    "category": "GENERAL",
+    "category": "SPAM",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -3770,7 +3743,7 @@
     "decided_by": "rule"
   },
   "email_455": {
-    "category": "INVOICE_QUERY",
+    "category": "SPAM",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -3827,18 +3800,14 @@
   },
   "email_462": {
     "category": "BL_COMPARISON",
-    "status": "MISMATCH",
+    "status": "OK",
     "review_reason": null,
-    "has_defect": true,
-    "defect_fields": [
-      "shipper",
-      "consignee",
-      "notify_party"
-    ],
+    "has_defect": false,
+    "defect_fields": [],
     "decided_by": "rule"
   },
   "email_463": {
-    "category": "INVOICE_QUERY",
+    "category": "GENERAL",
     "status": null,
     "review_reason": null,
     "has_defect": false,
@@ -4136,7 +4105,6 @@
     "review_reason": null,
     "has_defect": true,
     "defect_fields": [
-      "consignee",
       "gross_weight_kg"
     ],
     "decided_by": "rule"

@@ -18,13 +18,17 @@ _SPAM = re.compile(
     r"\b(unsubscribe|out of office|marketing rates|click here|congratulations you|"
     r"lottery|crypto giveaway|viagra|work from home|cheap freight promo|"
     r"won\b|gift card|claim now|verify your account|limited time offer|"
-    r"guaranteed returns|urgent:\s*your email storage)\b",
+    r"guaranteed returns|urgent:\s*your email storage|"
+    r"unpaid customs|track-parcel|hello dear|bank officer|"
+    r"urgent business proposal|bank details to proceed|"
+    r"bitcoin investment|one weird trick|90%\s*off|"
+    r"undelivered messages in your mailbox)\b",
     re.I,
 )
 _INVOICE = re.compile(
     r"\b(invoice|debit note|credit note|freight charges|thc\b|demurrage|detention|"
-    r"payment query|overcharged|double.?charg|cancel invoice|billing|"
-    r"goods receipt|\bgr\b|d&d|local charge)\b",
+    r"payment query|overcharged|double.?charg|cancel invoice|"
+    r"goods receipt|d&d|local charge)\b",
     re.I,
 )
 # Comparison only — never a bare "draft BL" / "SI" mention, and never the
@@ -116,7 +120,7 @@ def official_rule_classify(email: EmailMessage) -> ScoutResult | None:
     bl_compare = bool(_BL_COMPARE.search(blob))
     si_text = _si_request_text(blob)
 
-    if _SPAM.search(blob) and not has_si and not has_bl and not _INVOICE.search(blob):
+    if _SPAM.search(blob) and not has_si and not has_bl:
         return ScoutResult(
             category=Category.SPAM,
             label=ScoutLabel.OPERATIONAL_NOISE,
@@ -150,20 +154,20 @@ def official_rule_classify(email: EmailMessage) -> ScoutResult | None:
             reason="rule:si-request",
             route="rules",
         )
-    if _INVOICE.search(blob) and not has_si:
-        return ScoutResult(
-            category=Category.INVOICE_QUERY,
-            label=ScoutLabel.INVOICE_OR_CHARGES,
-            confidence=0.96,
-            reason="rule:invoice",
-            route="rules",
-        )
     if _GENERAL.search(blob) and not has_si and not has_bl:
         return ScoutResult(
             category=Category.GENERAL,
             label=ScoutLabel.OPERATIONAL_NOISE,
             confidence=0.95,
             reason="rule:general-ops",
+            route="rules",
+        )
+    if _INVOICE.search(blob) and not has_si:
+        return ScoutResult(
+            category=Category.INVOICE_QUERY,
+            label=ScoutLabel.INVOICE_OR_CHARGES,
+            confidence=0.96,
+            reason="rule:invoice",
             route="rules",
         )
     if has_si and not has_bl and _HAS_SI.search(email.subject):

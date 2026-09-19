@@ -53,7 +53,7 @@ Of the 220 comparison cases: **148 OK**, **52 MISMATCH**, **20 NEEDS_REVIEW**.
 
 **Bridge (already on the public site).** Board **Find** (`/` to focus): email number (`12` or `email_012`) and keywords over subject / verdict / extracted fields. Dark olive instrument rail, not a cream card. Pilot Chaos / Lock to Ledger filters, Source-mail 15s timeout, HOLD-strictness dial, mild card tilt. Cache lockstep: `app.js?v=51` and `store.js?v=51`, `styles.css?v=34`.
 
-**Tests.** `py -3 -m pytest -q` is **124 passed**. Official competition `final_score` is still unknown until `score_cli.py` or `INBOX_BASE_URL/submit` is available (`sdoc-hackathon-docker` is not on this machine). Local 520 walk after the placeholder-port fix: SI_REQUEST 125, NEEDS_REVIEW 20 (5+5+5+5 including missing_value 5).
+**Tests.** `py -3 -m pytest -q` is **126 passed**. Official `score_cli.py` on the local 520 rules-only `data/submission.json` (from `D:\Downloads\sdoc-hackathon-docker`) prints **final_score 1.0000**.
 
 ---
 
