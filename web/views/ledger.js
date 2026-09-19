@@ -1,5 +1,5 @@
 // ④ Ledger — every rule a pilot ever taught the system, with provenance and revoke.
-import { store as bridgeStore } from "../lib/store.js?v=47";
+import { store as bridgeStore } from "../lib/store.js?v=48";
 import { esc, $, $$, on, shortId, fmtTime } from "../lib/dom.js";
 import { enter } from "../lib/motion.js";
 import { fieldZh } from "../lib/copy.js";

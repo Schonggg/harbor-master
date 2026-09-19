@@ -53,17 +53,23 @@ export function rollup(fieldVerdicts) {
  */
 export function reAdjudicate(card, floor, extractMin = 0.75) {
   const recorded = card.verdict;
+  let gated = 0;
   const fvs = (card.field_verdicts || []).map((fv) => {
     if (!fv.charge) return fv;
     if (fv.state === "MATCH") return fv;
     if ((fv.pleas || []).some((p) => p.accepted)) return fv;
     if (/^ledger/.test(fv.rationale || "")) return fv;
+    gated += 1;
     const conf = Math.min(fv.charge.left?.confidence ?? 0.5, fv.charge.right?.confidence ?? 0.5);
     const state = conf < extractMin || conf < floor ? "UNCERTAIN" : "MISMATCH";
     return { ...fv, state };
   });
-  const failureForced = (card.failure_codes || []).length > 0 && recorded === "PILOT" && !fvs.some((f) => f.charge);
-  return { ...card, field_verdicts: fvs, verdict: failureForced ? "PILOT" : rollup(fvs) };
+  // Empty / degraded cards have nothing left to re-gate — keep the recorded stamp.
+  if (!gated) return { ...card, field_verdicts: fvs, verdict: recorded || rollup(fvs) };
+  if ((card.failure_codes || []).length > 0 && recorded === "PILOT") {
+    return { ...card, field_verdicts: fvs, verdict: "PILOT" };
+  }
+  return { ...card, field_verdicts: fvs, verdict: rollup(fvs) };
 }
 
 export function computeMetrics(runs) {

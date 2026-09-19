@@ -1,6 +1,6 @@
 // ⑥ Metrics + autonomy dial — false alarms as the hero number, confusion matrix,
 // field-level agreement, and a live what-if dial over the match-confidence floor.
-import { store as bridgeStore } from "../lib/store.js?v=47";
+import { store as bridgeStore } from "../lib/store.js?v=48";
 import { esc, $, $$, on, clamp } from "../lib/dom.js";
 import { enter, countTo } from "../lib/motion.js";
 import { FIELD_ORDER, fieldZh, fieldEn, PRESETS } from "../lib/copy.js";
@@ -35,7 +35,7 @@ export function mount(root, ctx) {
         <div class="section-title"><h3>HOLD strictness</h3><small>SAME EVIDENCE · CONFIDENCE GATE ONLY</small></div>
         <div class="dial-layout">
           <div class="dial-controls">
-            <div class="dial-value"><b id="dial-v">${floor.toFixed(2)}</b><span>Below this extract confidence, a leftover mismatch becomes PILOT instead of HOLD</span></div>
+            <div class="dial-value"><b id="dial-v">${floor.toFixed(2)}</b><span>Same SI/BL evidence. Raise the floor and leftover mismatches with extract confidence below it leave HOLD and join Pilot.</span></div>
             <input type="range" class="dial" id="dial" min="0.60" max="0.98" step="0.01" value="${floor}" aria-label="Confidence floor" />
             <div class="dial-scale"><span>0.60 hold more</span><span>0.80</span><span>0.98 hand more to humans</span></div>
             <div class="presets">${Object.entries(PRESETS).map(([k, p]) => `<button type="button" class="btn btn-sm" data-preset="${k}">${p.zh} · ${p.floor}</button>`).join("")}</div>
@@ -332,15 +332,17 @@ export function mount(root, ctx) {
       const pr = PRESETS[btn.dataset.preset];
       btn.classList.toggle("on", Boolean(pr && Math.abs(pr.floor - floor) < 0.001));
     });
+    const dClear = p.CLEAR - rec.CLEAR;
+    const delta = (n) => (n ? ` <span style="font-size:.75rem;font-weight:500">${n > 0 ? "+" : ""}${n}</span>` : "");
     $("#dial-stats", root).innerHTML = `
-      <div class="dial-stat"><small>Recorded HOLD</small><b class="v-HOLD" style="color:var(--v)">${rec.HOLD}</b></div>
-      <div class="dial-stat"><small>If applied HOLD</small><b class="v-HOLD" style="color:var(--v)">${p.HOLD}${dHold ? ` <span style="font-size:.75rem;font-weight:500">${dHold > 0 ? "+" : ""}${dHold}</span>` : ""}</b></div>
-      <div class="dial-stat"><small>If applied Pilot</small><b class="v-PILOT" style="color:var(--v)">${p.PILOT}${dPilot ? ` <span style="font-size:.75rem;font-weight:500">${dPilot > 0 ? "+" : ""}${dPilot}</span>` : ""}</b></div>`;
+      <div class="dial-stat"><small>If applied CLEAR</small><b class="v-CLEAR" style="color:var(--v)">${p.CLEAR}${delta(dClear)}</b></div>
+      <div class="dial-stat"><small>If applied HOLD</small><b class="v-HOLD" style="color:var(--v)">${p.HOLD}${delta(dHold)}</b></div>
+      <div class="dial-stat"><small>If applied Pilot</small><b class="v-PILOT" style="color:var(--v)">${p.PILOT}${delta(dPilot)}</b></div>`;
     const applyBtn = $("[data-apply-floor]", root);
     if (applyBtn) applyBtn.disabled = applied;
     $("#dial-note", root).textContent = applied
       ? `This desk already uses floor ${floor.toFixed(2)}. Header is ${live.CLEAR} CLEAR · ${live.HOLD} HOLD · ${live.PILOT} PILOT. Defence outcomes stay put. Refresh restores the recorded 520.`
-      : `Preview only until you apply. Recorded desk is ${rec.CLEAR} CLEAR · ${rec.HOLD} HOLD · ${rec.PILOT} PILOT. Apply rewrites this session's header, Board, and Pilot — not the official submission.`;
+      : `Preview only. Recorded desk is ${rec.CLEAR} CLEAR · ${rec.HOLD} HOLD · ${rec.PILOT} PILOT. On this 520, leftover mismatch confidence sits around 0.93 and 0.96 — Balanced 0.92 matches the header; Cautious 0.97 hands those HOLDs to Pilot. Apply moves this session's header, Board, and Pilot. Official submission stays put.`;
     renderCurve();
   }
 
