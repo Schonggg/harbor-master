@@ -67,23 +67,30 @@ def run_scorer(submission: Path) -> dict:
     scoring = find_scoring()
     gold = find_gold()
     if cli:
+        cmd = [sys.executable, str(cli), str(submission), "--json"]
+        if gold and gold.is_file():
+            cmd.extend(["--ground-truth", str(gold)])
         proc = subprocess.run(
-            [sys.executable, str(cli), str(submission)],
+            cmd,
             cwd=str(cli.parent),
             capture_output=True,
             text=True,
             encoding="utf-8",
             errors="replace",
+            timeout=120,
         )
-        text = (proc.stdout or "") + (proc.stderr or "")
-        board: dict = {"stdout": text, "returncode": proc.returncode}
+        board: dict = {
+            "stdout": proc.stdout or "",
+            "stderr": proc.stderr or "",
+            "returncode": proc.returncode,
+            "scorer": str(cli),
+        }
         try:
             parsed = json.loads(proc.stdout)
             if isinstance(parsed, dict):
                 board.update(parsed)
-        except json.JSONDecodeError:
-            pass
-        board["scorer"] = str(cli)
+        except json.JSONDecodeError as exc:
+            board["error"] = f"score_cli --json did not parse: {exc}"
         return board
     if scoring and gold:
         sys.path.insert(0, str(scoring.parent))
@@ -114,12 +121,12 @@ def print_summary(board: dict, count: int) -> None:
     stage1 = _pick(board, ("stage1", "macro_f1"), "stage1_macro_f1")
     stage3 = _pick(board, ("stage3", "defect_f1"), "stage3_defect_f1")
     e2e = _pick(board, ("end_to_end", "rate"), "end_to_end_rate")
-    esc_p = _pick(board, ("reliability", "precision"), "escalation_precision")
-    esc_r = _pick(board, ("reliability", "recall"), "escalation_recall")
+    esc_p = _pick(board, ("reliability", "escalation_precision"), "escalation_precision")
+    esc_r = _pick(board, ("reliability", "escalation_recall"), "escalation_recall")
     if esc_p is None:
-        esc_p = _pick(board, ("escalation", "precision"), "escalation_precision")
+        esc_p = _pick(board, ("reliability", "precision"), "escalation_precision")
     if esc_r is None:
-        esc_r = _pick(board, ("escalation", "recall"), "escalation_recall")
+        esc_r = _pick(board, ("reliability", "recall"), "escalation_recall")
     delta = None if final is None else final - BASELINE_FINAL
     print("=" * 50)
     print("HARBOR MASTER OFFICIAL BENCHMARK")
@@ -142,7 +149,7 @@ def print_summary(board: dict, count: int) -> None:
     if board.get("error"):
         print(board["error"])
     stdout = board.get("stdout")
-    if stdout and "SDOC" in str(stdout):
+    if stdout and "SDOC HACKATHON SCORE" in str(stdout):
         print()
         print(stdout)
 
