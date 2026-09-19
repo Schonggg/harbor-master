@@ -48,6 +48,7 @@ htmlcov/
 .ruff_cache/
 .mypy_cache/
 .vercel
+.env
 .env.local
+.env.*.local
 !.env.example
-!.env

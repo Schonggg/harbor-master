@@ -181,7 +181,7 @@ On the **public site**:
 3. **Load inbox** fills **at most one missing official email per request**. The UI continues until the board reaches 520.
 4. Hosted reset **does not wipe** Postgres.
 
-Locally, with this clone's `.env` and `data/sdoc/`, the same official corpus is available. Without `DATABASE_URL`, SQLite is used. That path is for development.
+Locally, copy `.env.example` to `.env` and fill keys. The 520-email bundle is at `data/sdoc/`. Without `DATABASE_URL`, SQLite is used. That path is for development.
 
 Without an LLM key the product still runs: Scout and Reader degrade to rules, the court still adjudicates, and uncertain or unreadable cases go to PILOT.
 
@@ -230,7 +230,7 @@ Local `score_cli.py` against the 520 official inbox and against five re-generate
 
 Python 3.11+ (on Windows, `py -3`).
 
-This clone already includes `.env` and the official 520-email bundle at `data/sdoc/`. Those files contain live keys. Do not leak them.
+This clone includes the official 520-email bundle at `data/sdoc/`. Live keys are **not** in git. Copy `.env.example` to `.env` for local work. The public site keeps the same keys in the Vercel project env, so going public does not change https://harbormaster-1.vercel.app/.
 
 ```powershell
 py -3 -m pip install -e ".[dev]"
@@ -248,7 +248,7 @@ With Make:
 make setup && make run
 ```
 
-If you only have `.env.example` (no private `.env`), copy it first and fill keys:
+Copy `.env.example` to `.env` and fill keys before the first local run:
 
 ```powershell
 copy .env.example .env
