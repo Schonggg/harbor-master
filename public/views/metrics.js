@@ -1,6 +1,6 @@
 // ⑥ Metrics + autonomy dial — false alarms as the hero number, confusion matrix,
 // field-level agreement, and a live what-if dial over the match-confidence floor.
-import { store as bridgeStore } from "../lib/store.js?v=48";
+import { store as bridgeStore } from "../lib/store.js?v=49";
 import { esc, $, $$, on, clamp } from "../lib/dom.js";
 import { enter, countTo } from "../lib/motion.js";
 import { FIELD_ORDER, fieldZh, fieldEn, PRESETS } from "../lib/copy.js";
@@ -98,16 +98,10 @@ export function mount(root, ctx) {
     dial.value = floor;
     renderDial();
   });
-  on(root, "click", "[data-apply-floor]", async () => {
+  on(root, "click", "[data-apply-floor]", () => {
     const before = store.recordedCounts();
     const after = store.applyFloorToDesk(floor);
-    try {
-      await store.setAutonomy({ floor });
-    } catch (e) {
-      ctx.toast(`Desk moved locally; backend floor failed: ${e.message}`, "warn", 5000);
-      return;
-    }
-    ctx.toast(`Desk HOLD ${before.HOLD} → ${after.HOLD}, Pilot ${before.PILOT} → ${after.PILOT}. Header and Pilot follow.`, "ok", 6000);
+    ctx.toast(`Desk HOLD ${before.HOLD} → ${after.HOLD}, Pilot ${before.PILOT} → ${after.PILOT}. Header and Pilot follow. Official 520 is unchanged.`, "ok", 6000);
   });
   on(root, "click", "[data-restore-desk]", () => {
     const after = store.restoreRecordedDesk();
