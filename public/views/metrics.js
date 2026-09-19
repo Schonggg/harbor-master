@@ -1,6 +1,6 @@
 // ⑥ Metrics + autonomy dial — false alarms as the hero number, confusion matrix,
 // field-level agreement, and a live what-if dial over the match-confidence floor.
-import { store as bridgeStore } from "../lib/store.js?v=46";
+import { store as bridgeStore } from "../lib/store.js?v=47";
 import { esc, $, $$, on, clamp } from "../lib/dom.js";
 import { enter, countTo } from "../lib/motion.js";
 import { FIELD_ORDER, fieldZh, fieldEn, PRESETS } from "../lib/copy.js";
@@ -8,14 +8,13 @@ import { FIELD_ORDER, fieldZh, fieldEn, PRESETS } from "../lib/copy.js";
 export function mount(root, ctx) {
   const store = ctx.store || bridgeStore;
   let floor = store.s.autonomy?.thresholds?.match_confidence_floor ?? 0.92;
-  let pushTimer = null;
 
   root.innerHTML = `
     <section class="view">
       <div class="view-head">
         <div>
           <h1>Metrics <small>METRICS</small></h1>
-          <p>Top row is score-sheet discipline (rules we can prove). The mix and field bars below are this live 520 board. The dial changes how often the court holds versus handing to a human. None of this is the hidden organizer F1.</p>
+          <p>Top row is score-sheet discipline (rules we can prove). The mix and field bars below are this live 520 board. The dial previews a stricter or looser HOLD gate on the same evidence — apply it to move the header and Pilot queue.</p>
         </div>
       </div>
       <div class="kpi-grid" id="kpis"></div>
@@ -33,17 +32,21 @@ export function mount(root, ctx) {
         </div>
       </div>
       <div class="panel panel-pad">
-        <div class="section-title"><h3>Autonomy dial</h3><small>AUTONOMY DIAL · MATCH CONFIDENCE FLOOR</small></div>
+        <div class="section-title"><h3>HOLD strictness</h3><small>SAME EVIDENCE · CONFIDENCE GATE ONLY</small></div>
         <div class="dial-layout">
           <div class="dial-controls">
-            <div class="dial-value"><b id="dial-v">${floor.toFixed(2)}</b><span>Confidence floor · below this, the system will not hold</span></div>
+            <div class="dial-value"><b id="dial-v">${floor.toFixed(2)}</b><span>Below this extract confidence, a leftover mismatch becomes PILOT instead of HOLD</span></div>
             <input type="range" class="dial" id="dial" min="0.60" max="0.98" step="0.01" value="${floor}" aria-label="Confidence floor" />
-            <div class="dial-scale"><span>0.60 aggressive</span><span>0.80</span><span>0.98 cautious</span></div>
+            <div class="dial-scale"><span>0.60 hold more</span><span>0.80</span><span>0.98 hand more to humans</span></div>
             <div class="presets">${Object.entries(PRESETS).map(([k, p]) => `<button type="button" class="btn btn-sm" data-preset="${k}">${p.zh} · ${p.floor}</button>`).join("")}</div>
             <div class="dial-stats" id="dial-stats"></div>
+            <div class="dial-actions">
+              <button type="button" class="btn btn-primary" data-apply-floor>Apply to this desk</button>
+              <button type="button" class="btn" data-restore-desk>Restore recorded 520</button>
+            </div>
             <p class="muted" style="font-size:.8rem" id="dial-note"></p>
           </div>
-          <div><svg class="curve" id="curve" viewBox="0 0 200 110" role="img" aria-label="Floor vs auto rate and human share"></svg></div>
+          <div><svg class="curve" id="curve" viewBox="0 0 200 110" role="img" aria-label="Floor vs HOLD and Pilot counts"></svg></div>
         </div>
       </div>
       <details class="panel panel-pad metrics-fold" id="discipline-panel">
@@ -88,7 +91,29 @@ export function mount(root, ctx) {
 
   const dial = $("#dial", root);
   dial.addEventListener("input", () => { floor = Number(dial.value); renderDial(); });
-  dial.addEventListener("change", () => push({ floor }));
+  on(root, "click", "[data-preset]", (_, el) => {
+    const p = PRESETS[el.dataset.preset];
+    if (!p) return;
+    floor = p.floor;
+    dial.value = floor;
+    renderDial();
+  });
+  on(root, "click", "[data-apply-floor]", async () => {
+    const before = store.recordedCounts();
+    const after = store.applyFloorToDesk(floor);
+    try {
+      await store.setAutonomy({ floor });
+    } catch (e) {
+      ctx.toast(`Desk moved locally; backend floor failed: ${e.message}`, "warn", 5000);
+      return;
+    }
+    ctx.toast(`Desk HOLD ${before.HOLD} → ${after.HOLD}, Pilot ${before.PILOT} → ${after.PILOT}. Header and Pilot follow.`, "ok", 6000);
+  });
+  on(root, "click", "[data-restore-desk]", () => {
+    const after = store.restoreRecordedDesk();
+    ctx.toast(`Restored recorded desk: ${after.CLEAR} CLEAR · ${after.HOLD} HOLD · ${after.PILOT} PILOT.`, "ok", 5000);
+    renderDial();
+  });
   on(root, "click", "[data-ops]", async (_, el) => {
     const op = el.dataset.ops;
     el.disabled = true;
@@ -135,16 +160,6 @@ export function mount(root, ctx) {
   });
 
   let opsCache = null;
-
-  function push(body) {
-    clearTimeout(pushTimer);
-    pushTimer = setTimeout(async () => {
-      try {
-        await store.setAutonomy(body);
-        ctx.toast(`Floor set to ${floor.toFixed(2)}${store.live ? " — new cases will use this ruling" : " (offline: local projection only)"}`, "ok");
-      } catch (e) { ctx.toast(e.message, "err"); }
-    }, 250);
-  }
 
   function renderKpis(animate) {
     const m = store.s.metrics || {};
@@ -307,35 +322,50 @@ export function mount(root, ctx) {
 
   function renderDial() {
     $("#dial-v", root).textContent = floor.toFixed(2);
+    const rec = store.recordedCounts();
     const p = store.project(floor);
-    const cur = store.s.autonomy?.thresholds?.match_confidence_floor;
+    const live = store.counts();
+    const dHold = p.HOLD - rec.HOLD;
+    const dPilot = p.PILOT - rec.PILOT;
+    const applied = store.s.deskFloor != null && Math.abs(store.s.deskFloor - floor) < 0.001;
+    $$("[data-preset]", root).forEach((btn) => {
+      const pr = PRESETS[btn.dataset.preset];
+      btn.classList.toggle("on", Boolean(pr && Math.abs(pr.floor - floor) < 0.001));
+    });
     $("#dial-stats", root).innerHTML = `
-      <div class="dial-stat"><small>Auto rate</small><b class="v-CLEAR" style="color:var(--v)">${p.auto.toFixed(1)}%</b></div>
-      <div class="dial-stat"><small>HOLD</small><b class="v-HOLD" style="color:var(--v)">${p.HOLD}</b></div>
-      <div class="dial-stat"><small>Human load</small><b class="v-PILOT" style="color:var(--v)">${p.PILOT} <span style="font-size:.8rem;font-weight:400">mails / round</span></b></div>`;
-    $("#dial-note", root).textContent = `Projection re-runs the judge floor over the recorded confidence of the current ${p.total} cases (defence outcomes stay put).${cur != null ? ` Backend floor is ${Number(cur).toFixed(2)}.` : ""} Lower floor holds more and raises false-alarm risk. Higher floor raises a hand more often and the human load rises.`;
+      <div class="dial-stat"><small>Recorded HOLD</small><b class="v-HOLD" style="color:var(--v)">${rec.HOLD}</b></div>
+      <div class="dial-stat"><small>If applied HOLD</small><b class="v-HOLD" style="color:var(--v)">${p.HOLD}${dHold ? ` <span style="font-size:.75rem;font-weight:500">${dHold > 0 ? "+" : ""}${dHold}</span>` : ""}</b></div>
+      <div class="dial-stat"><small>If applied Pilot</small><b class="v-PILOT" style="color:var(--v)">${p.PILOT}${dPilot ? ` <span style="font-size:.75rem;font-weight:500">${dPilot > 0 ? "+" : ""}${dPilot}</span>` : ""}</b></div>`;
+    const applyBtn = $("[data-apply-floor]", root);
+    if (applyBtn) applyBtn.disabled = applied;
+    $("#dial-note", root).textContent = applied
+      ? `This desk already uses floor ${floor.toFixed(2)}. Header is ${live.CLEAR} CLEAR · ${live.HOLD} HOLD · ${live.PILOT} PILOT. Defence outcomes stay put. Refresh restores the recorded 520.`
+      : `Preview only until you apply. Recorded desk is ${rec.CLEAR} CLEAR · ${rec.HOLD} HOLD · ${rec.PILOT} PILOT. Apply rewrites this session's header, Board, and Pilot — not the official submission.`;
     renderCurve();
   }
 
   function renderCurve() {
     const svg = $("#curve", root);
+    const rec = store.recordedCounts();
     const xs = [];
     for (let f = 0.6; f <= 0.981; f += 0.01) xs.push(Number(f.toFixed(2)));
     const pts = xs.map((f) => ({ f, ...store.project(f) }));
-    const total = Math.max(1, store.s.runs.length);
+    const maxHold = Math.max(1, rec.HOLD, ...pts.map((p) => p.HOLD));
+    const maxPilot = Math.max(1, rec.PILOT, ...pts.map((p) => p.PILOT));
     const X = (f) => 14 + ((f - 0.6) / 0.38) * 180;
-    const Y = (v) => 96 - v * 84;
-    const path = (fn) => pts.map((p, i) => `${i ? "L" : "M"}${X(p.f).toFixed(1)},${Y(fn(p)).toFixed(1)}`).join(" ");
-    const grid = [0, 0.25, 0.5, 0.75, 1].map((g) => `<line class="grid" x1="14" x2="194" y1="${Y(g)}" y2="${Y(g)}" /><text x="1" y="${Y(g) + 1.5}">${Math.round(g * 100)}</text>`).join("");
+    const Yh = (n) => 96 - (n / maxHold) * 84;
+    const Yp = (n) => 96 - (n / maxPilot) * 84;
+    const path = (fn, Y) => pts.map((p, i) => `${i ? "L" : "M"}${X(p.f).toFixed(1)},${Y(fn(p)).toFixed(1)}`).join(" ");
+    const grid = [0, 0.25, 0.5, 0.75, 1].map((g) => `<line class="grid" x1="14" x2="194" y1="${96 - g * 84}" y2="${96 - g * 84}" />`).join("");
     const ticks = [0.6, 0.7, 0.8, 0.9, 0.98].map((t) => `<text x="${X(t) - 5}" y="106">${t.toFixed(2)}</text>`).join("");
     svg.innerHTML = `
       ${grid}${ticks}
-      <path class="auto" d="${path((p) => p.auto / 100)}" />
-      <path class="pilot" d="${path((p) => p.PILOT / total)}" />
+      <path class="auto" d="${path((p) => p.HOLD, Yh)}" />
+      <path class="pilot" d="${path((p) => p.PILOT, Yp)}" />
       <line class="cur" x1="${X(floor)}" x2="${X(floor)}" y1="8" y2="96" />
       <text x="${clamp(X(floor) - 12, 14, 160)}" y="6" style="fill:var(--signal)">floor ${floor.toFixed(2)}</text>
-      <text x="150" y="14" style="fill:var(--clear)">auto rate %</text>
-      <text x="150" y="20" style="fill:var(--pilot)">human share %</text>`;
+      <text x="148" y="14" style="fill:var(--hold)">HOLD count</text>
+      <text x="148" y="20" style="fill:var(--pilot)">Pilot count</text>`;
   }
 
   async function loadOps() {
@@ -431,6 +461,6 @@ export function mount(root, ctx) {
       }
       renderAll(false);
     },
-    destroy() { clearTimeout(pushTimer); },
+    destroy() {},
   };
 }

@@ -1918,6 +1918,8 @@ input[type="range"].dial::-moz-range-thumb {
 .curve .cur { stroke: var(--signal); stroke-dasharray: 3 3; }
 .curve text { fill: var(--text-3); font-family: var(--font-mono); font-size: 4px; }
 .presets { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.presets .btn.on { background: var(--text); color: #0a0a0a; }
+.dial-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
 
 /* ── Toast / busy ──────────────────────────────────────────────────────── */
 .toast-stack {

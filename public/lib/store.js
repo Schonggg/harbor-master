@@ -52,15 +52,17 @@ export function rollup(fieldVerdicts) {
  * confidence gate moves. Returns a new card; does not mutate.
  */
 export function reAdjudicate(card, floor, extractMin = 0.75) {
+  const recorded = card.verdict;
   const fvs = (card.field_verdicts || []).map((fv) => {
     if (!fv.charge) return fv;
+    if (fv.state === "MATCH") return fv;
     if ((fv.pleas || []).some((p) => p.accepted)) return fv;
     if (/^ledger/.test(fv.rationale || "")) return fv;
     const conf = Math.min(fv.charge.left?.confidence ?? 0.5, fv.charge.right?.confidence ?? 0.5);
     const state = conf < extractMin || conf < floor ? "UNCERTAIN" : "MISMATCH";
     return { ...fv, state };
   });
-  const failureForced = (card.failure_codes || []).length > 0 && card.verdict === "PILOT" && !fvs.some((f) => f.charge);
+  const failureForced = (card.failure_codes || []).length > 0 && recorded === "PILOT" && !fvs.some((f) => f.charge);
   return { ...card, field_verdicts: fvs, verdict: failureForced ? "PILOT" : rollup(fvs) };
 }
 
@@ -120,6 +122,7 @@ class Store extends EventTarget {
       ledger: [],
       metrics: null,
       autonomy: null,
+      deskFloor: null,
       lastChaos: null,
       lastError: null,
       health: null,
@@ -263,6 +266,7 @@ class Store extends EventTarget {
     this.set({
       runs: decorated,
       metrics: local,
+      deskFloor: null,
     }, "refresh");
     this.prefetchEmails(decorated).catch(() => {});
     Promise.all([
@@ -633,13 +637,55 @@ class Store extends EventTarget {
     const extractMin = t.extract_min_confidence ?? 0.75;
     const c = { CLEAR: 0, HOLD: 0, PILOT: 0 };
     for (const r of this.state.runs) {
-      const card = r.payload?.card;
+      const card = r._sourceCard || r.payload?.card;
       if (!card) continue;
       const v = reAdjudicate(card, floor, extractMin).verdict;
       c[v] = (c[v] || 0) + 1;
     }
     const total = this.state.runs.length || 1;
     return { ...c, total: this.state.runs.length, auto: Math.round((1000 * (c.CLEAR + c.HOLD)) / total) / 10 };
+  }
+
+  recordedCounts() {
+    const c = { CLEAR: 0, HOLD: 0, PILOT: 0 };
+    for (const r of this.state.runs) {
+      const v = (r._sourceCard || r.payload?.card)?.verdict || r.verdict;
+      c[v] = (c[v] || 0) + 1;
+    }
+    return c;
+  }
+
+  applyFloorToDesk(floor) {
+    const extractMin = this.state.autonomy?.thresholds?.extract_min_confidence ?? 0.75;
+    const runs = this.state.runs.map((r) => {
+      const src = r._sourceCard || clone(r.payload?.card || {});
+      const card = reAdjudicate(src, floor, extractMin);
+      return {
+        ...r,
+        _sourceCard: src,
+        verdict: card.verdict,
+        payload: { ...(r.payload || {}), card: { ...card, verdict: card.verdict } },
+      };
+    });
+    this.set({ runs, deskFloor: floor }, "autonomy-apply");
+    this.recompute();
+    return this.counts();
+  }
+
+  restoreRecordedDesk() {
+    const runs = this.state.runs.map((r) => {
+      if (!r._sourceCard) return r;
+      const card = clone(r._sourceCard);
+      return {
+        ...r,
+        _sourceCard: r._sourceCard,
+        verdict: card.verdict,
+        payload: { ...(r.payload || {}), card },
+      };
+    });
+    this.set({ runs, deskFloor: null }, "autonomy-restore");
+    this.recompute();
+    return this.counts();
   }
 
   async refreshHealth() {
