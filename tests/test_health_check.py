@@ -208,6 +208,67 @@ def test_garbage_content_does_not_crash():
     }
 
 
+def test_bl_filename_on_commercial_invoice_is_wrong_doc_type():
+    invoice_text = (
+        "COMMERCIAL INVOICE\nInvoice No.: 5250078266\n"
+        "Description  Qty  Unit Price  Amount (USD)\n"
+        "Paper  500  45.00  22500\n"
+        "*** THIS IS A COMMERCIAL INVOICE - NOT A SHIPPING INSTRUCTION ***\n"
+    )
+    inv = ExtractedDocument(filename="email_pair_BL.txt", text=invoice_text, fields={})
+    assert classify_doc_kind(inv) == "other"
+    fields = _full_fields()
+    si = ExtractedDocument(
+        filename="email_pair_SI.txt",
+        kind="si",
+        text="SHIPPING INSTRUCTION\n" + "x" * 80,
+        fields=fields,
+    )
+    inv.kind = classify_doc_kind(inv)
+    email = EmailMessage(
+        email_id="wd1",
+        subject="TO CONFIRM DOCS",
+        body_text="Please find attached the SI and the Commercial Invoice. Kindly confirm the BL is in order.",
+        attachment_paths=["email_pair_SI.txt", "email_pair_BL.txt"],
+    )
+    result = health_check(email, [si, inv], si=si, bl=inv)
+    assert result.ok is False
+    assert result.reason == ReviewReason.WRONG_DOC_TYPE
+
+
+def test_bl_filename_on_packing_list_is_wrong_doc_type():
+    pl_text = (
+        "PACKING LIST\nShipper: ACME\nConsignee: BETA\n"
+        "CTN-001  10kg\n*** PACKING LIST ONLY - NO PORT OR VESSEL DETAILS ***\n"
+    )
+    pl = ExtractedDocument(
+        filename="email_pair_BL.txt",
+        text=pl_text,
+        fields={"shipper": _fv("shipper", "ACME"), "consignee": _fv("consignee", "BETA")},
+    )
+    assert classify_doc_kind(pl) == "other"
+
+
+def test_real_bl_filename_stays_bl_even_if_invoice_mentioned():
+    fields = _full_fields()
+    bl = ExtractedDocument(
+        filename="email_pair_BL.txt",
+        text="BILL OF LADING\nFreight payable as per commercial invoice.\nPort of loading Shanghai\n",
+        fields=fields,
+    )
+    assert classify_doc_kind(bl) == "bl"
+
+
+def test_si_listing_packing_list_as_required_doc_stays_si():
+    fields = _full_fields()
+    si = ExtractedDocument(
+        filename="email_pair_SI.txt",
+        text="SHIPPING INSTRUCTION\nDocuments Required:\n1) 3 Original invoice\n2) 3 Packing list\n",
+        fields=fields,
+    )
+    assert classify_doc_kind(si) == "si"
+
+
 def test_priority_when_multiple_conditions_hit():
     fields = _full_fields()
 
@@ -267,3 +328,81 @@ def test_priority_when_multiple_conditions_hit():
         bl=invoice,
     )
     assert r3.reason == ReviewReason.WRONG_DOC_TYPE
+
+
+def test_two_line_to_the_order_of_is_not_missing_consignee():
+    from harbormaster.reader.extractor import FieldExtractor
+
+    text = (
+        "SHIPPING INSTRUCTION\n"
+        "Shipper (Principal or Seller)\n"
+        "ACME TRADING\n"
+        "To the Order of\n"
+        "BETA LOGISTICS\n"
+        "Notify\n"
+        "BETA LOGISTICS\n"
+        "PORT OF LOADING\n"
+        "SINGAPORE\n"
+        "POD\n"
+        "ROTTERDAM\n"
+        "Total Containers\n"
+        "3 x 40HC\n"
+        "GROSS WEIGHT\n"
+        "1000\n"
+    )
+    si = FieldExtractor(degrade=True, rules_only=True).extract_text(text, filename="si.txt")
+    assert "consignee" in si.fields
+    assert "BETA" in si.fields["consignee"].raw_value.upper()
+
+
+def test_docx_table_fields_are_not_missing_value(tmp_path):
+    from docx import Document
+
+    from harbormaster.reader.extractor import FieldExtractor
+
+    path = tmp_path / "email_pair_BL.docx"
+    doc = Document()
+    doc.add_paragraph("BILL OF LADING (DRAFT)")
+    table = doc.add_table(rows=7, cols=2)
+    rows = [
+        ("Shipper (Principal or Seller)", "ACME TRADING"),
+        ("Consignee", "BETA LOGISTICS"),
+        ("Notify", "BETA LOGISTICS"),
+        ("PORT OF LOADING", "SINGAPORE"),
+        ("POD", "ROTTERDAM"),
+        ("Total Containers", "3 x 40HC"),
+        ("Gross Wt (kgs)", "1000"),
+    ]
+    for i, (label, value) in enumerate(rows):
+        table.rows[i].cells[0].text = label
+        table.rows[i].cells[1].text = value
+    doc.save(path)
+
+    extracted = FieldExtractor(degrade=True, rules_only=True).extract_path(path)
+    assert extracted.kind == "bl"
+    for name in (
+        "shipper",
+        "consignee",
+        "notify_party",
+        "port_of_loading",
+        "port_of_discharge",
+        "container_count",
+        "gross_weight_kg",
+    ):
+        assert name in extracted.fields, extracted.fields.keys()
+
+    si = ExtractedDocument(
+        filename="email_pair_SI.txt",
+        kind="si",
+        text="SHIPPING INSTRUCTION\n" + "x" * 80,
+        fields=_full_fields(),
+    )
+    email = EmailMessage(
+        email_id="docx1",
+        subject="SI vs BL",
+        attachment_paths=["email_pair_SI.txt", str(path)],
+    )
+    result = health_check(email, [si, extracted], si=si, bl=extracted)
+    assert result.reason != ReviewReason.MISSING_VALUE
+    assert result.ok is True or result.reason is None
+

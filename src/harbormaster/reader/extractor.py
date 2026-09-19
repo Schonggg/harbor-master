@@ -21,26 +21,26 @@ from harbormaster.reader.parsers.base import BaseParser
 
 _FIELD_PATTERNS: dict[str, re.Pattern[str]] = {
     "shipper": re.compile(
-        r"(?:Shipper(?:\s*/\s*Exporter)?|Consignor|Exporter)[:\s]+(.+)", re.I
+        r"(?:Shipper(?:\s*/\s*Exporter)?|Consignor|Exporter)[ \t:]+(.+)", re.I
     ),
-    "consignee": re.compile(r"Consignee[:\s]+(.+)", re.I),
-    "notify_party": re.compile(r"Notify(?:\s+Party)?[:\s]+(.+)", re.I),
+    "consignee": re.compile(r"Consignee[ \t:]+(.+)", re.I),
+    "notify_party": re.compile(r"Notify(?:\s+Party)?[ \t:]+(.+)", re.I),
     "port_of_loading": re.compile(
-        r"(?:Port of Loading|Load Port|Place of Loading|\bPOL\b)[:\s]+(.+)", re.I
+        r"(?:Port of Loading|Load Port|Place of Loading|\bPOL\b)[ \t:]+(.+)", re.I
     ),
     "port_of_discharge": re.compile(
-        r"(?:Port of Discharge|Discharge Port|Place of Discharge|\bPOD\b)[:\s]+(.+)", re.I
+        r"(?:Port of Discharge|Discharge Port|Place of Discharge|\bPOD\b)[ \t:]+(.+)", re.I
     ),
     "container_count": re.compile(
-        r"(?:No\.?\s*of\s*(?:Containers|Pkgs|Packages)(?:\s+or\s+Packages)?|Container Count|Containers|Quantity)[:\s]+(.+)",
+        r"(?:No\.?\s*of\s*(?:Containers|Pkgs|Packages)(?:\s+or\s+Packages)?|Container Count|Containers|Quantity)[ \t:]+(.+)",
         re.I,
     ),
     "gross_weight_kg": re.compile(
-        r"(?:Gross\s*Weight(?:\s*\(\s*KG[s]?\s*\))?|Gross\s*Wt(?:\s*\(\s*kgs?\s*\))?|G\.?W\.?|Gr\.?\s*Wt)[:\s]+(.+)",
+        r"(?:Gross\s*Weight\w*(?:\s*\(\s*KG[s]?\s*\))?|Gross\s*Wt(?:\s*\(\s*kgs?\s*\))?|G\.?W\.?|Gr\.?\s*Wt)[ \t]*:[ \t]*(.+)",
         re.I,
     ),
     "vessel_voyage": re.compile(
-        r"(?:Vessel(?:\s*/\s*Voyage)?|Vessel Name|Ocean Vessel)[:\s]+(.+)", re.I
+        r"(?:Vessel(?:\s*/\s*Voyage)?|Vessel Name|Ocean Vessel)[ \t:]+(.+)", re.I
     ),
 }
 
@@ -107,7 +107,12 @@ class FieldExtractor:
             match = pattern.search(text)
             if not match:
                 continue
-            raw = match.group(1).strip().splitlines()[0].strip()
+            raw = (match.group(1) or "").strip()
+            if not raw:
+                continue
+            raw = raw.splitlines()[0].strip()
+            if not raw:
+                continue
             out[name] = FieldValue(
                 name=name,
                 raw_value=raw,
@@ -126,17 +131,11 @@ class FieldExtractor:
             for alias in names:
                 index[_norm_label(alias)] = canonical
         out: dict[str, FieldValue] = {}
-        for line in text.splitlines():
-            match = _LINE_RE.match(line.strip())
-            if not match:
-                continue
-            label = _norm_label(match.group(1))
-            canonical = index.get(label)
-            if not canonical:
-                continue
-            raw = match.group(2).strip()
+
+        def _put(canonical: str, raw: str) -> None:
+            raw = (raw or "").strip()
             if not raw:
-                continue
+                return
             out.setdefault(
                 canonical,
                 FieldValue(
@@ -146,6 +145,26 @@ class FieldExtractor:
                     evidence=make_evidence(raw, source=source, attachment_name=attachment_name),
                 ),
             )
+
+        lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+        for i, line in enumerate(lines):
+            match = _LINE_RE.match(line)
+            if match:
+                canonical = index.get(_norm_label(match.group(1)))
+                if canonical:
+                    _put(canonical, match.group(2))
+                continue
+            canonical = index.get(_norm_label(line))
+            if not canonical or i + 1 >= len(lines):
+                continue
+            nxt = lines[i + 1]
+            if re.match(r"^[^:\n]{2,40}:\s+\S", nxt) or index.get(_norm_label(nxt)):
+                continue
+            if canonical in {"gross_weight_kg", "gross_weight", "container_count"} and not re.match(
+                r"\d", nxt
+            ):
+                continue
+            _put(canonical, nxt)
         return out
 
     def _llm_extract(

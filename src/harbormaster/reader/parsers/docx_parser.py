@@ -12,4 +12,14 @@ class DocxParser(BaseParser):
         from docx import Document
 
         doc = Document(path)
-        return "\n".join(p.text for p in doc.paragraphs if p.text)
+        lines = [p.text for p in doc.paragraphs if p.text]
+        for table in doc.tables:
+            for row in table.rows:
+                cells = [c.text.strip() for c in row.cells if c.text and c.text.strip()]
+                if not cells:
+                    continue
+                if len(cells) == 1:
+                    lines.append(cells[0])
+                else:
+                    lines.append(f"{cells[0]}: {cells[1]}")
+        return "\n".join(lines)

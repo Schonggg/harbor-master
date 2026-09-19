@@ -74,10 +74,20 @@ def classify_doc_kind(doc: ExtractedDocument) -> str:
     stem = Path(name).name
     text = _text_of(doc)
     blob = f"{name}\n{text[:1500]}"
+    filename_kind = None
     if re.search(r"(^|[_\-\s/])si(\.|_|-|$)", stem) or "shipping_instruction" in stem:
-        return "si"
-    if re.search(r"(^|[_\-\s/])bl(\.|_|-|$)", stem) or "bill_of_lading" in stem or "draft_bl" in stem:
-        return "bl"
+        filename_kind = "si"
+    elif re.search(r"(^|[_\-\s/])bl(\.|_|-|$)", stem) or "bill_of_lading" in stem or "draft_bl" in stem:
+        filename_kind = "bl"
+
+    # A misleading *_SI/*_BL filename must not hide an invoice / packing list / COO.
+    if filename_kind and _WRONG_TYPE.search(text):
+        cores = _BL_CORE if filename_kind == "bl" else _SI_CORE
+        if _core_fields_missing(doc, cores) or looks_structurally_wrong(doc, filename_kind):
+            return "other"
+
+    if filename_kind:
+        return filename_kind
     si_hit = bool(_SI_MARKERS.search(blob))
     bl_hit = bool(_BL_MARKERS.search(blob))
     if si_hit and not bl_hit:
