@@ -19,3 +19,5 @@ data/backups
 data/cache
 data/objects
 data/attachments
+reports/seed_runs
+reports/official_scores
