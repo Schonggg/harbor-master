@@ -153,3 +153,148 @@ def test_discipline_report_shows_matrix_ritual_and_zero_traps():
     assert head["ritual_count"] == 520
     assert head["ritual_ok"] == 520
     assert data["status"] == "ok"
+
+
+def test_unparseable_weight_is_not_a_defect():
+    from harbormaster.official.compare import CompareOutcome, compare_value, exact_defect_fields
+
+    defects, unparseable = exact_defect_fields(
+        {
+            "shipper": ("ACME", "ACME"),
+            "consignee": ("BETA", "BETA"),
+            "notify_party": ("BETA", "BETA"),
+            "port_of_loading": ("Shanghai", "Shanghai"),
+            "port_of_discharge": ("Los Angeles", "Los Angeles"),
+            "container_count": ("3", "3"),
+            "gross_weight_kg": ("approximately twenty tons", "approximately twenty tons"),
+        }
+    )
+    assert defects == []
+    assert unparseable == ["gross_weight_kg"]
+    assert (
+        compare_value("gross_weight_kg", "approximately twenty tons", "1000")
+        == CompareOutcome.UNPARSEABLE
+    )
+
+
+def test_unparseable_weight_becomes_needs_review_with_trace():
+    from harbormaster.graph.nodes import node_court
+    from harbormaster.graph.state import PipelineState
+    from harbormaster.models import (
+        CaseVerdict,
+        ExtractedDocument,
+        FieldValue,
+        ScoutResult,
+    )
+    from harbormaster.official.compare import exact_defect_fields
+
+    def fv(name: str, value: str) -> FieldValue:
+        return FieldValue(name=name, raw_value=value, confidence=0.95)
+
+    fields = {
+        "shipper": fv("shipper", "ACME"),
+        "consignee": fv("consignee", "BETA"),
+        "notify_party": fv("notify_party", "BETA"),
+        "port_of_loading": fv("port_of_loading", "Shanghai"),
+        "port_of_discharge": fv("port_of_discharge", "Los Angeles"),
+        "container_count": fv("container_count", "3"),
+        "gross_weight_kg": fv("gross_weight_kg", "approximately twenty tons"),
+    }
+    email = EmailMessage(email_id="u1", subject="SI vs BL")
+    scout = ScoutResult(category=Category.BL_COMPARISON, route="rules")
+    si = ExtractedDocument(filename="si.txt", kind="si", text="SHIPPING INSTRUCTION\n" + "x" * 80, fields=fields)
+    bl = ExtractedDocument(filename="bl.txt", kind="bl", text="BILL OF LADING\n" + "x" * 80, fields=fields)
+    state = PipelineState(
+        email=email,
+        scout=scout,
+        left_doc=si,
+        right_doc=bl,
+        docs=[si, bl],
+        save_board=False,
+    )
+    out = node_court(state)
+    assert out.official is not None
+    assert out.official.status == ComparisonStatus.NEEDS_REVIEW
+    assert out.official.review_reason == ReviewReason.MISSING_VALUE
+    assert out.official.has_defect is False
+    assert out.card is not None
+    assert out.card.verdict == CaseVerdict.PILOT
+    blob = " ".join(fv.rationale for fv in out.card.field_verdicts)
+    blob += " " + (out.health.detail if out.health else "")
+    assert "unparseable" in blob
+    assert "gross_weight_kg" in blob
+    _, unparseable = exact_defect_fields(
+        {k: (v.raw_value, v.raw_value) for k, v in fields.items()}
+    )
+    assert "gross_weight_kg" in unparseable
+
+
+def test_parseable_mismatch_still_mismatch():
+    from harbormaster.graph.nodes import node_court
+    from harbormaster.graph.state import PipelineState
+    from harbormaster.models import ExtractedDocument, FieldValue, ScoutResult
+
+    def fv(name: str, value: str) -> FieldValue:
+        return FieldValue(name=name, raw_value=value, confidence=0.99)
+
+    left = {
+        "shipper": fv("shipper", "ACME TRADING CO LTD"),
+        "consignee": fv("consignee", "BETA"),
+        "notify_party": fv("notify_party", "BETA"),
+        "port_of_loading": fv("port_of_loading", "Shanghai"),
+        "port_of_discharge": fv("port_of_discharge", "Los Angeles"),
+        "container_count": fv("container_count", "3"),
+        "gross_weight_kg": fv("gross_weight_kg", "1000"),
+    }
+    right = dict(left)
+    right["shipper"] = fv("shipper", "ACME TRADING INC")
+    email = EmailMessage(email_id="u2", subject="SI vs BL")
+    scout = ScoutResult(category=Category.BL_COMPARISON, route="rules")
+    si = ExtractedDocument(filename="si.txt", kind="si", text="SHIPPING INSTRUCTION\n" + "x" * 80, fields=left)
+    bl = ExtractedDocument(filename="bl.txt", kind="bl", text="BILL OF LADING\n" + "x" * 80, fields=right)
+    out = node_court(
+        PipelineState(email=email, scout=scout, left_doc=si, right_doc=bl, docs=[si, bl], save_board=False)
+    )
+    assert out.official is not None
+    assert out.official.status == ComparisonStatus.MISMATCH
+    assert out.official.defect_fields == ["shipper"]
+    assert out.official.review_reason is None
+
+
+def test_parseable_match_still_ok():
+    from harbormaster.graph.nodes import node_court
+    from harbormaster.graph.state import PipelineState
+    from harbormaster.models import ExtractedDocument, FieldValue, ScoutResult
+
+    def fv(name: str, value: str) -> FieldValue:
+        return FieldValue(name=name, raw_value=value, confidence=0.99)
+
+    fields = {
+        "shipper": fv("shipper", "Acme Trading Co., Ltd."),
+        "consignee": fv("consignee", "BETA"),
+        "notify_party": fv("notify_party", "BETA"),
+        "port_of_loading": fv("port_of_loading", "Shanghai (CNSHA)"),
+        "port_of_discharge": fv("port_of_discharge", "Los Angeles"),
+        "container_count": fv("container_count", "6 x 40'HC"),
+        "gross_weight_kg": fv("gross_weight_kg", "1,000 KGS"),
+    }
+    right = {
+        "shipper": fv("shipper", "ACME TRADING CO LTD"),
+        "consignee": fv("consignee", "BETA"),
+        "notify_party": fv("notify_party", "BETA"),
+        "port_of_loading": fv("port_of_loading", "shanghai"),
+        "port_of_discharge": fv("port_of_discharge", "Los Angeles"),
+        "container_count": fv("container_count", "6"),
+        "gross_weight_kg": fv("gross_weight_kg", "1000"),
+    }
+    email = EmailMessage(email_id="u3", subject="SI vs BL")
+    scout = ScoutResult(category=Category.BL_COMPARISON, route="rules")
+    si = ExtractedDocument(filename="si.txt", kind="si", text="SHIPPING INSTRUCTION\n" + "x" * 80, fields=fields)
+    bl = ExtractedDocument(filename="bl.txt", kind="bl", text="BILL OF LADING\n" + "x" * 80, fields=right)
+    out = node_court(
+        PipelineState(email=email, scout=scout, left_doc=si, right_doc=bl, docs=[si, bl], save_board=False)
+    )
+    assert out.official is not None
+    assert out.official.status == ComparisonStatus.OK
+    assert out.official.defect_fields == []
+    assert out.official.review_reason is None

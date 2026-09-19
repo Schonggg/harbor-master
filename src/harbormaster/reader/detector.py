@@ -30,6 +30,8 @@ def select_parser(path: Path) -> BaseParser:
         return TextParser()
     if suffix == ".docx":
         return DocxParser()
+    if suffix in {".xlsx", ".xls"} or "spreadsheet" in mime:
+        return XlsxParser()
     if suffix == ".pdf" or mime == "application/pdf":
         if pdf_has_text(path):
             return PdfParser()

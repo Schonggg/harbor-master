@@ -36,6 +36,16 @@ _WRONG_TYPE = re.compile(
     r"dangerous goods|msds|booking confirmation only)\b",
     re.I,
 )
+_NUM_TOKEN = re.compile(r"\d+(?:[.,]\d+)?")
+_CURRENCY = re.compile(r"(?:USD|EUR|GBP|CNY|RMB|SGD|JPY|HKD|[$¥€£])", re.I)
+_CARTON_LINE = re.compile(r"(?:CTN-|CARTON\s*NO\.?)\s*\d+", re.I)
+_COO_ORIGIN = re.compile(r"country of origin", re.I)
+_COO_ISSUER = re.compile(
+    r"chamber of commerce|issued by|issuing (?:body|authority)|this is to certify",
+    re.I,
+)
+_BL_CORE = ("port_of_loading", "port_of_discharge", "container_count")
+_SI_CORE = ("shipper", "consignee", "port_of_loading")
 
 
 def _text_of(doc: ExtractedDocument | None) -> str:
@@ -83,7 +93,53 @@ def classify_doc_kind(doc: ExtractedDocument) -> str:
         return "si"
     if _WRONG_TYPE.search(blob):
         return "other"
+    if looks_structurally_wrong(doc, "bl") or looks_structurally_wrong(doc, "si"):
+        return "other"
     return "unknown"
+
+
+def _field_missing(doc: ExtractedDocument, name: str) -> bool:
+    fv = doc.fields.get(name)
+    if fv is None:
+        return True
+    return is_placeholder(fv.raw_value or "")
+
+
+def _core_fields_missing(doc: ExtractedDocument, names: tuple[str, ...]) -> bool:
+    return all(_field_missing(doc, name) for name in names)
+
+
+def _invoice_table_lines(text: str) -> int:
+    """Rows that look like qty x amount: two numbers plus a currency token."""
+    n = 0
+    for line in (text or "").splitlines():
+        if len(_NUM_TOKEN.findall(line)) >= 2 and _CURRENCY.search(line):
+            n += 1
+    return n
+
+
+def _packing_list_signal(text: str) -> bool:
+    return sum(1 for line in (text or "").splitlines() if _CARTON_LINE.search(line)) >= 3
+
+
+def _certificate_of_origin_signal(text: str) -> bool:
+    blob = text or ""
+    return bool(_COO_ORIGIN.search(blob) and _COO_ISSUER.search(blob))
+
+
+def looks_structurally_wrong(doc: ExtractedDocument, expected_kind: str) -> bool:
+    """Keyword-free check: does this document fail the shape of expected_kind?
+
+    Both a missing-core-fields signal and a foreign-document layout signal
+    must fire. Field gaps alone (failed OCR on a real BL) are not enough.
+    """
+    text = _text_of(doc)
+    if expected_kind == "bl":
+        return _core_fields_missing(doc, _BL_CORE) and _invoice_table_lines(text) > 2
+    if expected_kind == "si":
+        foreign = _packing_list_signal(text) or _certificate_of_origin_signal(text)
+        return _core_fields_missing(doc, _SI_CORE) and foreign
+    return False
 
 
 def pair_si_bl(

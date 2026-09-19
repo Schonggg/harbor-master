@@ -327,6 +327,7 @@ public/          CDN copy of web/ (Vercel build)
 - [ADR-001](docs/decisions/ADR-001-llm-never-judges.md) - LLM never judges
 - [ADR-002](docs/decisions/ADR-002-three-state-verdict.md) - three-state, not two-state
 - [ADR-003](docs/decisions/ADR-003-ocr-confusion-guardrail.md) - OCR confusion only on scans
+- [ADR-004](docs/decisions/ADR-004-review-reason-priority.md) - NEEDS_REVIEW reason priority
 
 Further reading: [docs/architecture.md](docs/architecture.md), [docs/demo_script.md](docs/demo_script.md), [docs/field_risk_rationale.md](docs/field_risk_rationale.md).
 

@@ -1,7 +1,7 @@
 {
   "status": "ok",
   "talking_point": "The score sheet punishes false alarms harder than misses. We do not sample a few txt cases. Every field x txt/pdf/docx/xlsx x known label is a cell, and every normalization is checked against equivalent pairs before it is allowed to catch a mismatch.",
-  "ran_at": "2026-09-18T19:56:40.164668+00:00",
+  "ran_at": "2026-09-19T06:27:38.734686+00:00",
   "matrix": {
     "cells": 220,
     "passed": 220,
@@ -289,6 +289,15 @@
     },
     {
       "at": "2026-09-18T19:58:52.202234+00:00",
+      "kind": "evening",
+      "count": 520,
+      "ok": 520,
+      "crash_free": true,
+      "errors": {},
+      "error_count": 0
+    },
+    {
+      "at": "2026-09-19T06:28:13.229500+00:00",
       "kind": "evening",
       "count": 520,
       "ok": 520,

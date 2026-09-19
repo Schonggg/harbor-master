@@ -1,12 +1,16 @@
-"""L5 exact comparison — format normalize only, no fuzzy / no third state.
+"""L5 exact comparison - format normalize only, no fuzzy matching.
 
 A miss can still leave a record standing. A false alarm zeros it.
 Every new normalize rule must keep EQUIVALENT pairs matching in official.matrix.
+
+UNPARSEABLE is not a third match state. It means normalize() could not read a
+value, so the official path must not emit MISMATCH (that would be a false alarm).
 """
 
 from __future__ import annotations
 
 import re
+from enum import Enum
 
 from harbormaster.models import COMPARE_FIELDS
 
@@ -14,6 +18,12 @@ _WEIGHT = re.compile(r"[\d,.]+")
 _COUNT = re.compile(r"(\d+)")
 _LOCODE = re.compile(r"\([^)]*\)")
 _PUNCT = re.compile(r"[^\w\s]", re.UNICODE)
+
+
+class CompareOutcome(str, Enum):
+    MATCH = "match"
+    MISMATCH = "mismatch"
+    UNPARSEABLE = "unparseable"
 
 
 def fold(text: str) -> str:
@@ -46,20 +56,36 @@ def normalize(field: str, raw: str) -> str | int | None:
     return fold(text)
 
 
-def values_match(field: str, left: str, right: str) -> bool:
+def compare_value(field: str, left: str, right: str) -> CompareOutcome:
+    """Exact compare after format normalize. None from normalize is UNPARSEABLE."""
     a = normalize(field, left)
     b = normalize(field, right)
     if a is None or b is None:
-        return False
-    return a == b
+        return CompareOutcome.UNPARSEABLE
+    return CompareOutcome.MATCH if a == b else CompareOutcome.MISMATCH
 
 
-def exact_defect_fields(pairs: dict[str, tuple[str, str]]) -> list[str]:
+def values_match(field: str, left: str, right: str) -> bool:
+    """Boolean wrapper for format-matrix / EQUIVALENT cells.
+
+    Deprecated for official assemble. New code should call compare_value().
+    UNPARSEABLE returns False here so matrix callers keep a bool; it must not
+    be treated as an official MISMATCH (see exact_defect_fields).
+    """
+    return compare_value(field, left, right) == CompareOutcome.MATCH
+
+
+def exact_defect_fields(pairs: dict[str, tuple[str, str]]) -> tuple[list[str], list[str]]:
+    """Return (confirmed defect fields, fields that could not be parsed)."""
     defects: list[str] = []
+    unparseable: list[str] = []
     for field in COMPARE_FIELDS:
         if field not in pairs:
             continue
         left, right = pairs[field]
-        if not values_match(field, left, right):
+        outcome = compare_value(field, left, right)
+        if outcome == CompareOutcome.MISMATCH:
             defects.append(field)
-    return defects
+        elif outcome == CompareOutcome.UNPARSEABLE:
+            unparseable.append(field)
+    return defects, unparseable

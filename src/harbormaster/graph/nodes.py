@@ -14,7 +14,9 @@ from harbormaster.models import (
     CourtState,
     EvidenceSource,
     FailureCode,
+    HealthCheckResult,
     PilotDecision,
+    ReviewReason,
 )
 from harbormaster.official import assemble, decided_by_of
 from harbormaster.official.compare import exact_defect_fields
@@ -258,11 +260,43 @@ def node_court(state: PipelineState) -> PipelineState:
             right_fv = right_fv or state.right_doc.fields.get("gross_weight")
         if left_fv and right_fv:
             pairs[field] = (left_fv.raw_value, right_fv.raw_value)
-    official = assemble(
-        category=Category.BL_COMPARISON,
-        defect_fields=exact_defect_fields(pairs),
-        decided_by=decided,
-    )
+    defects, unparseable = exact_defect_fields(pairs)
+    if unparseable:
+        note = "unparseable: cannot normalize " + ", ".join(unparseable)
+        traced = []
+        for fv in adjusted:
+            hit = fv.field in unparseable or (
+                fv.field == "gross_weight" and "gross_weight_kg" in unparseable
+            )
+            if hit:
+                traced.append(
+                    fv.model_copy(
+                        update={"rationale": f"{fv.rationale}; {note}" if fv.rationale else note}
+                    )
+                )
+            else:
+                traced.append(fv)
+        adjusted = traced
+        official = assemble(
+            category=Category.BL_COMPARISON,
+            gate_reason=ReviewReason.MISSING_VALUE,
+            decided_by=decided,
+        )
+        state.health = HealthCheckResult(
+            ok=False,
+            reason=ReviewReason.MISSING_VALUE,
+            detail=note,
+            missing_fields=list(unparseable),
+            si_filename=state.left_doc.filename if state.left_doc else None,
+            bl_filename=state.right_doc.filename if state.right_doc else None,
+        )
+        verdict = CaseVerdict.PILOT
+    else:
+        official = assemble(
+            category=Category.BL_COMPARISON,
+            defect_fields=defects,
+            decided_by=decided,
+        )
 
     card = build_card(
         email=state.email,
