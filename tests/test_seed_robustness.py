@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 from harbormaster.ledger.store import LedgerStore
 from harbormaster.report.robustness import load_robustness_report
 
 ROOT = Path(__file__).resolve().parents[1]
+SCRIPTS = ROOT / "scripts"
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
+from sdoc_paths import find_generator
 
 
 def test_pipeline_source_never_mentions_ground_truth():
@@ -49,7 +55,16 @@ def test_score_against_gt_is_only_in_the_harness():
     assert scored["n"] == 1
     assert scored["exact"] == 1
     assert scored["score_pct"] == 100.0
-    assert mod.find_generator() is None or mod.find_generator().name == "generate.py"
+    assert mod.find_generator is find_generator
+    got = find_generator()
+    assert got is None or got.name == "generate.py"
+
+
+def test_find_generator_prefers_env(tmp_path, monkeypatch):
+    planted = tmp_path / "generate.py"
+    planted.write_text("# sponsor generator stub\n", encoding="utf-8")
+    monkeypatch.setenv("HARBORMASTER_GENERATOR", str(planted))
+    assert find_generator() == planted
 
 
 def test_metrics_exposes_robustness_talking_point():

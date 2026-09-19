@@ -39,6 +39,7 @@ node_modules/
 # Eval artifacts (keep snapshots/ tracked selectively)
 eval/snapshots/*.json
 !eval/snapshots/.gitkeep
+reports/seed_runs/
 
 # Coverage / cache
 .coverage

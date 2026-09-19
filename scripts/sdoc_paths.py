@@ -61,3 +61,34 @@ def find_gold() -> Path | None:
         if path.is_file():
             return path
     return find_file(GOLD_FILENAME)
+
+
+def find_generator() -> Path | None:
+    """Locate the sponsor generate.py. Same discovery family as find_gold()."""
+    env = (os.environ.get("HARBORMASTER_GENERATOR") or "").strip()
+    if env:
+        path = Path(env).expanduser()
+        if path.is_file():
+            return path
+        nested = path / "generate.py"
+        if nested.is_file():
+            return nested
+    gold = find_gold()
+    if gold:
+        sibling = gold.parent / "generate.py"
+        if sibling.is_file():
+            return sibling
+    fallbacks = [
+        ROOT / "generate.py",
+        ROOT / "vendor" / "generate.py",
+        ROOT / "sdoc-hackathon-docker" / "data_v2" / "generate.py",
+        ROOT.parent / "sdoc-hackathon-docker" / "data_v2" / "generate.py",
+        Path(r"D:\Downloads\sdoc-hackathon-docker") / "data_v2" / "generate.py",
+        Path.home() / "Downloads" / "sdoc-hackathon-docker" / "data_v2" / "generate.py",
+        Path.home() / "Downloads" / "sdoc-hackathon-bundle" / "generate.py",
+        Path.home() / "Downloads" / "generate.py",
+    ]
+    for cand in fallbacks:
+        if cand.is_file():
+            return cand
+    return None

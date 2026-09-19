@@ -18,7 +18,11 @@ def test_demo_si_vs_bl_rules_only():
     assert set(rec) == {"category", "status", "review_reason", "has_defect", "defect_fields", "decided_by"}
 
 
-def test_local_corpus_covers_every_demo_id():
+def test_local_corpus_covers_every_demo_id(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "harbormaster.graph.pipeline._submission_path",
+        lambda: tmp_path / "submission.json",
+    )
     out = run_corpus(source="local", rules_only=True, two_value=True, save_board=False)
     assert out["count"] >= 5
     assert not out["errors"]

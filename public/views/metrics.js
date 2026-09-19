@@ -1,6 +1,6 @@
 // ⑥ Metrics + autonomy dial — false alarms as the hero number, confusion matrix,
 // field-level agreement, and a live what-if dial over the match-confidence floor.
-import { store as bridgeStore } from "../lib/store.js?v=51";
+import { store as bridgeStore } from "../lib/store.js?v=52";
 import { esc, $, $$, on, clamp } from "../lib/dom.js";
 import { enter, countTo } from "../lib/motion.js";
 import { FIELD_ORDER, fieldZh, fieldEn, PRESETS } from "../lib/copy.js";
@@ -242,7 +242,10 @@ export function mount(root, ctx) {
       list.innerHTML = `<p class="muted">${esc(ident)} Ground truth never enters the pipeline.${r.status === "generator_not_in_tree" ? " Sponsor generate.py is not bundled here." : ""}</p>`;
       return;
     }
-    list.innerHTML = `<div class="legend">${seeds.map((s) => `<span class="chip">${esc(String(s.seed))} · ${esc(String(s.score_pct != null ? s.score_pct + "%" : s.status || "ok"))}</span>`).join("")}</div>
+    list.innerHTML = `<div class="legend">${seeds.map((s) => {
+      const mark = s.final_score != null ? Number(s.final_score).toFixed(4) : (s.score_pct != null ? s.score_pct + "%" : s.status || "ok");
+      return `<span class="chip">${esc(String(s.seed))} · ${esc(String(mark))}</span>`;
+    }).join("")}</div>
       <p class="muted" style="margin-top:.6rem">Variance ${r.score_variance != null ? r.score_variance : "—"} · ${esc(r.local_reproducibility?.ok === false ? "local replay drifted" : "local replay identical")}</p>`;
   }
 

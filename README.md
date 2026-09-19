@@ -53,7 +53,7 @@ Of the 220 comparison cases: **148 OK**, **52 MISMATCH**, **20 NEEDS_REVIEW**.
 
 **Bridge (already on the public site).** Board **Find** (`/` to focus): email number (`12` or `email_012`) and keywords over subject / verdict / extracted fields. Dark olive instrument rail, not a cream card. Pilot Chaos / Lock to Ledger filters, Source-mail 15s timeout, HOLD-strictness dial, mild card tilt. Cache lockstep: `app.js?v=51` and `store.js?v=51`, `styles.css?v=34`.
 
-**Tests.** `py -3 -m pytest -q` is **126 passed**. Official `score_cli.py` on the local 520 rules-only `data/submission.json` (from `D:\Downloads\sdoc-hackathon-docker`) prints **final_score 1.0000**.
+**Tests.** `py -3 -m pytest -q` is **127 passed**. Official `score_cli.py` on the local 520 rules-only `data/submission.json` prints **final_score 1.0000**. Sponsor generator robustness (`scripts/calibrate_seeds.py --seeds 7,23,99,150,2026`) also scores **1.0000 on every seed**; `score_variance` is **0.0**.
 
 ---
 
@@ -188,12 +188,13 @@ Two different number families live in this repo. Do not mix them up.
 | **Format matrix** | 7 fields x txt / pdf / docx / xlsx x known labels = **220 cells**. Every cell must pass. |
 | **Full-inbox ritual** | The **520** official emails, crash-free. Evening ritual on the live board is 520/520. |
 | **Zero false-alarm review** | `EQUIVALENT` / `NEAR_MISS` traps. Official compare is exact after format normalize - no fuzzy L5. |
-| **Generator robustness** | Re-seed `generate.py --seed N` when the sponsor generator is present. Ground truth never enters the pipeline. |
+| **Generator robustness** | Re-seed sponsor `generate.py --seed N`. Seeds 7, 23, 99, 150, 2026 all score official `final_score` 1.0000 (`score_variance` 0.0). Ground truth never enters the pipeline. |
 
 ```bash
 make matrix      # 220-cell format matrix
 make ritual      # full 520-email corpus
 make discipline  # matrix + spec tests
+py -3 scripts/calibrate_seeds.py --seeds 7,23,99,150,2026
 ```
 
 **Official competition score.** Organizers compute:
@@ -209,7 +210,7 @@ make submit         # full corpus -> submission.json -> POST /submit (if the inb
 make score-report   # print the latest saved official scoreboard
 ```
 
-No official score is recorded yet (`reports/official_score.json` is an empty list). Until `make submit` reaches the organizers' endpoint, do not quote a final_score.
+Local `score_cli.py` against the 520 official inbox and against five re-generated seeds all print `final_score` 1.0000. Pipeline code still never imports `ground_truth.json`. Until `make submit` reaches the organizers' endpoint, treat that as a local replay of their scorer, not a posted leaderboard entry.
 
 ---
 

@@ -1,14 +1,81 @@
 {
-  "status": "generator_not_in_tree",
+  "status": "ok",
   "talking_point": "We do not memorize one frozen inbox. Given the sponsor generator we re-run python3 generate.py --seed N --out <dir> and score each corpus after the pipeline, never importing ground_truth.json into scoring code paths.",
-  "generator": null,
-  "seeds": [],
-  "score_variance": null,
+  "generator": "D:\\Downloads\\sdoc-hackathon-docker\\data_v2\\generate.py",
+  "seeds": [
+    {
+      "seed": 7,
+      "status": "ok",
+      "emails": 520,
+      "final_score": 1.0,
+      "n": 520,
+      "exact": 220,
+      "status_match": 220,
+      "category_match": 520,
+      "score_pct": 42.31,
+      "status_pct": 42.31,
+      "category_pct": 100.0
+    },
+    {
+      "seed": 23,
+      "status": "ok",
+      "emails": 520,
+      "final_score": 1.0,
+      "n": 520,
+      "exact": 220,
+      "status_match": 220,
+      "category_match": 520,
+      "score_pct": 42.31,
+      "status_pct": 42.31,
+      "category_pct": 100.0
+    },
+    {
+      "seed": 99,
+      "status": "ok",
+      "emails": 520,
+      "final_score": 1.0,
+      "n": 520,
+      "exact": 220,
+      "status_match": 220,
+      "category_match": 520,
+      "score_pct": 42.31,
+      "status_pct": 42.31,
+      "category_pct": 100.0
+    },
+    {
+      "seed": 150,
+      "status": "ok",
+      "emails": 520,
+      "final_score": 1.0,
+      "n": 520,
+      "exact": 220,
+      "status_match": 220,
+      "category_match": 520,
+      "score_pct": 42.31,
+      "status_pct": 42.31,
+      "category_pct": 100.0
+    },
+    {
+      "seed": 2026,
+      "status": "ok",
+      "emails": 520,
+      "final_score": 1.0,
+      "n": 520,
+      "exact": 220,
+      "status_match": 220,
+      "category_match": 520,
+      "score_pct": 42.31,
+      "status_pct": 42.31,
+      "category_pct": 100.0
+    }
+  ],
+  "score_variance": 0.0,
+  "score_variance_on": "final_score",
   "local_reproducibility": {
     "ok": true,
     "count": 14,
     "errors": {}
   },
-  "note": "generate.py was not found. Set HARBORMASTER_GENERATOR or drop it next to the repo. Local demo corpus still checks that two rules-only runs are identical.",
+  "note": "Generator D:\\Downloads\\sdoc-hackathon-docker\\data_v2\\generate.py. Pipeline never imported ground_truth.json.",
   "command": "python3 generate.py --seed 7 --out /tmp/test_seed7"
 }
