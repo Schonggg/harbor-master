@@ -1,9 +1,10 @@
 // ① Verdict board — Worldwide Hubs: three offices, then the docket.
-import { store as bridgeStore } from "../lib/store.js?v=49";
+import { store as bridgeStore } from "../lib/store.js?v=50";
 import { esc, $, $$, on, shortId } from "../lib/dom.js";
 import { enter, countTo, magnetize, tiltify, scrollToY } from "../lib/motion.js";
 import { FIELD_ORDER, scoutZh, VERDICT, fieldZh } from "../lib/copy.js";
 import { card, orderedFields, summarize } from "../lib/case.js?v=12";
+import { highlightText, matchesRun, rankRun } from "../lib/docket-search.js?v=50";
 
 const HUBS = [
   {
@@ -75,7 +76,8 @@ const ART = {
 
 export function mount(root, ctx) {
   const store = ctx.store || bridgeStore;
-  const state = { verdict: "ALL", label: "ALL" };
+  const state = { verdict: "ALL", label: "ALL", query: "" };
+  try { state.query = sessionStorage.getItem("hm.docket.q") || ""; } catch { /* private mode */ }
 
   root.innerHTML = `
     <section class="view board-view">
@@ -110,7 +112,15 @@ export function mount(root, ctx) {
             <h2>Docket</h2>
             <p id="docket-copy">One card per email. Open any card for the seven-field compare.</p>
           </div>
-          <button type="button" class="btn" id="board-refresh">Refresh</button>
+          <div class="docket-tools">
+            <form class="docket-find" id="docket-find" role="search">
+              <label for="docket-q">Find</label>
+              <input id="docket-q" name="q" type="search" enterkeyhint="search" autocomplete="off" spellcheck="false" placeholder="004 · shipper · Ningbo" aria-label="Search docket by number or keyword" value="${esc(state.query)}" />
+              <span class="find-meta" id="docket-hits" aria-live="polite"></span>
+              <button type="button" class="find-clear" id="docket-clear" hidden aria-label="Clear search">Clear</button>
+            </form>
+            <button type="button" class="btn" id="board-refresh">Refresh</button>
+          </div>
         </div>
         <div class="filter-row" id="filters"></div>
         <div id="cards"></div>
@@ -124,6 +134,53 @@ export function mount(root, ctx) {
   $("#board-refresh", root).addEventListener("click", async () => {
     try { await store.refresh(); ctx.toast("Refreshed", "ok"); } catch (e) { ctx.toast(e.message, "err"); }
   });
+
+  const qEl = $("#docket-q", root);
+  const findForm = $("#docket-find", root);
+  const clearBtn = $("#docket-clear", root);
+  let findTimer = 0;
+
+  function applyQuery(next, { render = true } = {}) {
+    state.query = String(next ?? "");
+    try { sessionStorage.setItem("hm.docket.q", state.query); } catch { /* private mode */ }
+    if (qEl && qEl.value !== state.query) qEl.value = state.query;
+    if (clearBtn) clearBtn.hidden = !state.query.trim();
+    findForm?.classList.toggle("on", Boolean(state.query.trim()));
+    if (render) renderCards(false);
+  }
+
+  qEl?.addEventListener("input", () => {
+    clearTimeout(findTimer);
+    findTimer = setTimeout(() => applyQuery(qEl.value), 60);
+  });
+  qEl?.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      applyQuery("");
+      qEl.blur();
+    }
+  });
+  findForm?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    applyQuery(qEl?.value || "");
+    const hits = filtered().filter((r) => !r.pending && r.run_id);
+    if (hits.length === 1) ctx.openDetail(hits[0].run_id);
+  });
+  clearBtn?.addEventListener("click", () => {
+    applyQuery("");
+    qEl?.focus();
+  });
+
+  const onFindKey = (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key !== "/") return;
+    if (/input|textarea|select/i.test(e.target.tagName)) return;
+    e.preventDefault();
+    qEl?.focus();
+    qEl?.select();
+  };
+  addEventListener("keydown", onFindKey);
+  applyQuery(state.query, { render: false });
 
   on(hubsEl, "click", ".hub", (e, b) => {
     const next = b.dataset.verdict;
@@ -149,6 +206,7 @@ export function mount(root, ctx) {
     e.stopPropagation();
     ctx.navigate("court", { run: el.dataset.court });
   });
+  on(cardsEl, "click", "[data-clear-find]", () => { applyQuery(""); qEl?.focus(); });
   on(cardsEl, "click", "[data-seed]", () => ctx.seed());
   on(cardsEl, "keydown", ".mail-card", (e, el) => {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ctx.openDetail(el.dataset.run); }
@@ -160,14 +218,18 @@ export function mount(root, ctx) {
   }
 
   function filtered() {
+    const q = state.query;
     const runs = store.s.runs.filter((r) => {
       const c = card(r);
       if (state.verdict !== "ALL" && (c.verdict || r.verdict) !== state.verdict) return false;
       if (state.label !== "ALL" && (c.scout?.label || "unknown") !== state.label) return false;
+      if (!matchesRun(r, q)) return false;
       return true;
     });
-    if (state.verdict !== "ALL" || state.label !== "ALL") return runs;
-    return runs.concat(pendingItems().map((item) => ({ pending: true, ...item })));
+    const ranked = [...runs].sort((a, b) => rankRun(a, q) - rankRun(b, q) || String(a.email_id).localeCompare(String(b.email_id), undefined, { numeric: true }));
+    if (state.verdict !== "ALL" || state.label !== "ALL") return ranked;
+    const pending = pendingItems().filter((item) => matchesRun(item, q)).map((item) => ({ pending: true, ...item }));
+    return ranked.concat(pending);
   }
 
   function renderHubs() {
@@ -226,7 +288,9 @@ export function mount(root, ctx) {
       return;
     }
     if (!runs.length) {
-      cardsEl.innerHTML = `<div class="empty panel"><h3>No matching cards</h3><p>Try a different office, or clear the filter.</p></div>`;
+      const q = state.query.trim();
+      cardsEl.innerHTML = `<div class="empty panel"><h3>No matching cards</h3><p>${q ? `Nothing on this docket for "${esc(q)}". Try the email number (004) or a field value.` : "Try a different office, or clear the filter."}</p>${q ? `<button type="button" class="btn" data-clear-find>Clear search</button>` : ""}</div>`;
+      renderHits(0);
       return;
     }
     cardsEl.innerHTML = `<div class="card-grid">${runs.map((r) => {
@@ -237,11 +301,11 @@ export function mount(root, ctx) {
             <span class="verdict-tag">QUEUED<em>待审</em></span>
             <span class="chip">${r.attachments || 0} attachments</span>
           </div>
-          <h3 title="${esc(r.subject || r.email_id)}">${esc(r.subject || r.email_id)}</h3>
+          <h3 title="${esc(r.subject || r.email_id)}">${state.query.trim() ? highlightText(r.subject || r.email_id, state.query) : esc(r.subject || r.email_id)}</h3>
           <p class="summary">${esc(r.from_addr || "Official SDOC inbox")} — waiting for Scout → extract → court.</p>
           <div class="foot">
             <div class="field-strip" aria-hidden="true">${FIELD_ORDER.map(() => `<i class="none"></i>`).join("")}</div>
-            <span class="id">${esc(r.email_id)}</span>
+            <span class="id">${state.query.trim() ? highlightText(r.email_id, state.query) : esc(r.email_id)}</span>
           </div>
         </article>`;
       }
@@ -255,17 +319,30 @@ export function mount(root, ctx) {
             <span class="verdict-tag">${v}<em>${VERDICT[v]?.zh || ""}</em></span>
             <span class="chip">${esc(scoutZh(label))}${c.scout?.confidence != null ? ` · ${Math.round(c.scout.confidence * 100)}%` : ""}</span>
           </div>
-          <h3 title="${esc(c.subject || r.email_id)}">${esc(c.subject || r.email_id)}</h3>
+          <h3 title="${esc(c.subject || r.email_id)}">${state.query.trim() ? highlightText(c.subject || r.email_id, state.query) : esc(c.subject || r.email_id)}</h3>
           <p class="summary">${esc(summarize(r))}</p>
           <div class="foot">
             ${fieldStrip(r)}
-            <span class="id">${esc(r.email_id || shortId(r.run_id))}${c.degraded ? ' · <span class="v-PILOT" style="color:var(--v)">DEGRADED</span>' : ""}</span>
+            <span class="id">${state.query.trim() ? highlightText(r.email_id || shortId(r.run_id), state.query) : esc(r.email_id || shortId(r.run_id))}${c.degraded ? ' · <span class="v-PILOT" style="color:var(--v)">DEGRADED</span>' : ""}</span>
           </div>
           ${charged ? `<button type="button" class="btn btn-sm" data-court="${esc(r.run_id)}">Open court <span class="arrow">→</span></button>` : ""}
         </article>`;
     }).join("")}</div>`;
     if (animate && runs.length < 48) enter($$(".mail-card", cardsEl), { stagger: 0.035, y: 16 });
     prefetchVisible();
+    renderHits(runs.length);
+  }
+
+  function renderHits(shown) {
+    const el = $("#docket-hits", root);
+    if (!el) return;
+    const total = store.s.runs.length + pendingItems().length;
+    const q = state.query.trim();
+    if (!q) {
+      el.textContent = total ? `${total}` : "";
+      return;
+    }
+    el.textContent = `${shown} / ${total}`;
   }
 
   function prefetchVisible() {
@@ -318,5 +395,5 @@ export function mount(root, ctx) {
   const unMag = magnetize(hubsEl, ".hub", 6);
   const unTilt = tiltify(hubsEl, ".hub", { max: 3, glare: true });
   const unCardTilt = tiltify(cardsEl, ".mail-card", { max: 2, glare: true });
-  return { update, destroy() { unMag?.(); unTilt?.(); unCardTilt?.(); } };
+  return { update, destroy() { clearTimeout(findTimer); removeEventListener("keydown", onFindKey); unMag?.(); unTilt?.(); unCardTilt?.(); } };
 }
