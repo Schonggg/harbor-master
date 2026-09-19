@@ -109,6 +109,8 @@ def test_placeholder_is_missing_value():
     assert is_placeholder("TBA") is True
     assert is_placeholder("____") is True
     assert is_placeholder("____MT") is True
+    assert is_placeholder("N/A") is True
+    assert is_placeholder("not applicable") is True
     assert is_placeholder("ACME") is False
 
 

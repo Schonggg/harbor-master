@@ -406,3 +406,83 @@ def test_docx_table_fields_are_not_missing_value(tmp_path):
     assert result.reason != ReviewReason.MISSING_VALUE
     assert result.ok is True or result.reason is None
 
+
+def test_parenthetical_pol_placeholder_is_missing_value():
+    """'Port of Loading (POL): ____MT' must extract the blank, not '(POL): ____MT'."""
+    from harbormaster.reader.extractor import FieldExtractor
+
+    si_text = (
+        "SHIPPING INSTRUCTION\n"
+        "Shipper: ACME\n"
+        "Consignee: BETA\n"
+        "Notify: BETA\n"
+        "Port of Loading (POL): ____MT\n"
+        "Port of Discharge (POD): TBA\n"
+        "Total Containers: 2 x 20'GP\n"
+        "GROSS WEIGHT: 1000 KG\n"
+    )
+    bl_text = (
+        "BILL OF LADING\n"
+        "Shipper: ACME\n"
+        "Consignee: BETA\n"
+        "Notify: BETA\n"
+        "Port of Loading: SINGAPORE\n"
+        "Port of Discharge: ROTTERDAM\n"
+        "No. of Containers: 2 x 20'GP\n"
+        "GROSS WEIGHT: 1000 KG\n"
+    )
+    extractor = FieldExtractor(degrade=True, rules_only=True)
+    si = extractor.extract_text(si_text, filename="si.txt")
+    bl = extractor.extract_text(bl_text, filename="bl.txt")
+    assert si.fields["port_of_loading"].raw_value == "____MT"
+    assert si.fields["port_of_discharge"].raw_value == "TBA"
+    email = EmailMessage(
+        email_id="blank_pol",
+        subject="Please compare the SI and draft BL",
+        attachment_paths=["si.txt", "bl.txt"],
+    )
+    result = health_check(email, [si, bl], si=si, bl=bl)
+    assert result.ok is False
+    assert result.reason == ReviewReason.MISSING_VALUE
+    assert "port_of_loading" in result.missing_fields
+    assert "port_of_discharge" in result.missing_fields
+
+
+def test_chinese_gross_weight_placeholder_is_missing_value():
+    from harbormaster.reader.extractor import FieldExtractor
+
+    si_text = (
+        "SHIPPING INSTRUCTION\n"
+        "Shipper: ACME\n"
+        "Consignee: BETA\n"
+        "Notify: BETA\n"
+        "PORT OF LOADING: SINGAPORE\n"
+        "POD: ROTTERDAM\n"
+        "No. of Containers or Packages: 1 x 20'GP\n"
+        "Gross Weight毛重(KGS): N/A\n"
+    )
+    bl_text = (
+        "BILL OF LADING\n"
+        "Shipper: ACME\n"
+        "Consignee: BETA\n"
+        "Notify: BETA\n"
+        "Port of Loading: SINGAPORE\n"
+        "Port of Discharge: ROTTERDAM\n"
+        "No. of Containers: 1 x 20'GP\n"
+        "GROSS WEIGHT: 900 KG\n"
+    )
+    extractor = FieldExtractor(degrade=True, rules_only=True)
+    si = extractor.extract_text(si_text, filename="si.txt")
+    bl = extractor.extract_text(bl_text, filename="bl.txt")
+    assert si.fields["gross_weight_kg"].raw_value == "N/A"
+    email = EmailMessage(
+        email_id="blank_wt",
+        subject="Please compare the SI and draft BL",
+        attachment_paths=["si.txt", "bl.txt"],
+    )
+    result = health_check(email, [si, bl], si=si, bl=bl)
+    assert result.ok is False
+    assert result.reason == ReviewReason.MISSING_VALUE
+    assert "gross_weight_kg" in result.missing_fields
+
+

@@ -154,7 +154,7 @@ def official_rule_classify(email: EmailMessage) -> ScoutResult | None:
         return ScoutResult(
             category=Category.INVOICE_QUERY,
             label=ScoutLabel.INVOICE_OR_CHARGES,
-            confidence=0.94,
+            confidence=0.96,
             reason="rule:invoice",
             route="rules",
         )
@@ -162,7 +162,7 @@ def official_rule_classify(email: EmailMessage) -> ScoutResult | None:
         return ScoutResult(
             category=Category.GENERAL,
             label=ScoutLabel.OPERATIONAL_NOISE,
-            confidence=0.9,
+            confidence=0.95,
             reason="rule:general-ops",
             route="rules",
         )

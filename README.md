@@ -47,13 +47,13 @@ Of the 220 comparison cases: **148 OK**, **52 MISMATCH**, **20 NEEDS_REVIEW**.
 | `unreadable` | 5 | Empty text layer / file will not open / image-only scan with no OCR text. |
 | `missing_value` | 5 | A scored field is blank or a placeholder (`N/A`, `TBA`, `____`) on the document. |
 
-`wrong_doc_type`, `missing_attachment`, and `unreadable` already caught their five true cases; the change was to stop them (and `missing_value`) firing on mails that should be OK or MISMATCH. `missing_value` no longer fires just because a Word table was unread or a `*_BL` filename hid an invoice.
+`wrong_doc_type`, `missing_attachment`, and `unreadable` already caught their five true cases; the change was to stop them (and `missing_value`) firing on mails that should be OK or MISMATCH. `missing_value` now also treats `Port of Loading (POL): ____MT` / `N/A` / `TBA` as blanks instead of comparing them as ports.
 
 **Reader.** Image-only PDFs go to VisionParser. A short labelled PDF still uses PdfParser (`pdf_has_text` min 1 character) so the 220-cell format matrix stays green. DOCX tables are flattened to `label: value` lines. PDF labels on their own line ("To the Order of" then the company) are read as the next line.
 
 **Bridge (already on the public site).** Board **Find** (`/` to focus): email number (`12` or `email_012`) and keywords over subject / verdict / extracted fields. Dark olive instrument rail, not a cream card. Pilot Chaos / Lock to Ledger filters, Source-mail 15s timeout, HOLD-strictness dial, mild card tilt. Cache lockstep: `app.js?v=51` and `store.js?v=51`, `styles.css?v=34`.
 
-**Tests.** `py -3 -m pytest -q` is **122 passed**. Official competition `final_score` is still unknown until `make submit` reaches the organizers' inbox.
+**Tests.** `py -3 -m pytest -q` is **124 passed**. Official competition `final_score` is still unknown until `score_cli.py` or `INBOX_BASE_URL/submit` is available (`sdoc-hackathon-docker` is not on this machine). Local 520 walk after the placeholder-port fix: SI_REQUEST 125, NEEDS_REVIEW 20 (5+5+5+5 including missing_value 5).
 
 ---
 
@@ -200,9 +200,11 @@ make discipline  # matrix + spec tests
 
 `final_score = 0.30 * stage1_macro_f1 + 0.20 * stage3_defect_f1 + 0.50 * end_to_end_rate`
 
-with NEEDS_REVIEW precision/recall as a separate reliability axis. We never have ground-truth labels. The only legitimate score is a POST of our own `data/submission.json` to `INBOX_BASE_URL/submit` (or handing that file to the organizers' `score_cli.py`). Saved scoreboards live in `reports/official_score.json` (append-only list) and `reports/official_scores/`.
+with NEEDS_REVIEW precision/recall as a separate reliability axis. We never have ground-truth labels. The only score that counts is the organizer scorer. Pipeline code never imports `ground_truth.json`. To benchmark locally, unzip the Docker package and run:
 
 ```bash
+make benchmark      # 520 rules-only run, then score_cli.py if SDOC_DOCKER is set
+make forensics      # gold vs submission.json (needs ground_truth.json)
 make submit         # full corpus -> submission.json -> POST /submit (if the inbox HTTP server is up)
 make score-report   # print the latest saved official scoreboard
 ```
@@ -347,6 +349,8 @@ make eval        # confusion matrix + false-alarm report
 make full        # rules-only corpus into submission.json
 make submit      # full corpus with LLM extract where configured, then POST /submit
 make score-report  # latest official scoreboard from reports/official_score.json
+make benchmark     # 520 run + official score_cli.py when SDOC_DOCKER is present
+make forensics     # gold vs submission.json when ground_truth.json is present
 ```
 
 Windows without Make:

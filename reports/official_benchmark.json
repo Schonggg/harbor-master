@@ -1,0 +1,18 @@
+{
+  "recorded_at": "2026-09-19T12:28:30.415945+00:00",
+  "baseline": {
+    "stage1_macro_f1": 0.563,
+    "stage3_defect_f1": 0.655,
+    "end_to_end": 0.652,
+    "escalation_precision": 0.066,
+    "escalation_recall": 0.75,
+    "final_score": 0.6429
+  },
+  "count": 520,
+  "submission": "D:\\Monash Hackathon\\harbormaster\\data\\submission.json",
+  "scoreboard": {
+    "error": "Official scorer not found. Unzip sdoc-hackathon-docker next to the repo or set SDOC_DOCKER / SDOC_GROUND_TRUTH. Pipeline code does not ship gold labels."
+  },
+  "scorer": "",
+  "ground_truth": ""
+}

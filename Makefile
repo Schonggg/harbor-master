@@ -1,4 +1,4 @@
-.PHONY: setup run demo eval test lint reset matrix ritual discipline score-report
+.PHONY: setup run demo eval test lint reset matrix ritual discipline score-report benchmark forensics
 
 PYTHON ?= python
 PIP ?= $(PYTHON) -m pip
@@ -26,6 +26,12 @@ submit:
 
 score-report:
 	$(PYTHON) scripts/score_report.py
+
+benchmark:
+	$(PYTHON) scripts/benchmark_official.py
+
+forensics:
+	$(PYTHON) scripts/score_forensics.py
 
 backup:
 	$(PYTHON) scripts/backup_db.py

@@ -26,17 +26,19 @@ _FIELD_PATTERNS: dict[str, re.Pattern[str]] = {
     "consignee": re.compile(r"Consignee[ \t:]+(.+)", re.I),
     "notify_party": re.compile(r"Notify(?:\s+Party)?[ \t:]+(.+)", re.I),
     "port_of_loading": re.compile(
-        r"(?:Port of Loading|Load Port|Place of Loading|\bPOL\b)[ \t:]+(.+)", re.I
+        r"(?:Port of Loading|Load Port|Place of Loading|\bPOL\b)(?:\s*\(\s*POL\s*\))?[ \t:]+(.+)",
+        re.I,
     ),
     "port_of_discharge": re.compile(
-        r"(?:Port of Discharge|Discharge Port|Place of Discharge|\bPOD\b)[ \t:]+(.+)", re.I
+        r"(?:Port of Discharge|Discharge Port|Place of Discharge|\bPOD\b)(?:\s*\(\s*POD\s*\))?[ \t:]+(.+)",
+        re.I,
     ),
     "container_count": re.compile(
         r"(?:No\.?\s*of\s*(?:Containers|Pkgs|Packages)(?:\s+or\s+Packages)?|Container Count|Containers|Quantity)[ \t:]+(.+)",
         re.I,
     ),
     "gross_weight_kg": re.compile(
-        r"(?:Gross\s*Weight\w*(?:\s*\(\s*KG[s]?\s*\))?|Gross\s*Wt(?:\s*\(\s*kgs?\s*\))?|G\.?W\.?|Gr\.?\s*Wt)[ \t]*:[ \t]*(.+)",
+        r"(?:Gross\s*Weight[^\n:]{0,24}|Gross\s*Wt(?:\s*\(\s*kgs?\s*\))?|G\.?W\.?|Gr\.?\s*Wt)[ \t]*:[ \t]*(.+)",
         re.I,
     ),
     "vessel_voyage": re.compile(
@@ -45,6 +47,14 @@ _FIELD_PATTERNS: dict[str, re.Pattern[str]] = {
 }
 
 _LINE_RE = re.compile(r"^([^:\n]{2,40})[:\-]\s*(.+)$")
+_POL_POD_PREFIX = re.compile(r"^\(\s*(?:POL|POD)\s*\)\s*:?\s*", re.I)
+
+
+def _clean_extracted(name: str, raw: str) -> str:
+    text = (raw or "").strip()
+    if name in {"port_of_loading", "port_of_discharge"}:
+        text = _POL_POD_PREFIX.sub("", text).strip()
+    return text
 
 
 class FieldExtractor:
@@ -107,10 +117,11 @@ class FieldExtractor:
             match = pattern.search(text)
             if not match:
                 continue
-            raw = (match.group(1) or "").strip()
+            raw = _clean_extracted(name, match.group(1) or "")
             if not raw:
                 continue
             raw = raw.splitlines()[0].strip()
+            raw = _clean_extracted(name, raw)
             if not raw:
                 continue
             out[name] = FieldValue(
@@ -133,7 +144,7 @@ class FieldExtractor:
         out: dict[str, FieldValue] = {}
 
         def _put(canonical: str, raw: str) -> None:
-            raw = (raw or "").strip()
+            raw = _clean_extracted(canonical, raw)
             if not raw:
                 return
             out.setdefault(

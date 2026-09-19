@@ -23,7 +23,22 @@ _SEND = re.compile(
     r"need you to send|please send)\b",
     re.I,
 )
-_PLACEHOLDERS = {"???", "tba", "tbc", "n/a", "-", "--"}
+_PLACEHOLDERS = {
+    "???",
+    "tba",
+    "tbc",
+    "t.b.a",
+    "t.b.a.",
+    "n/a",
+    "n.a",
+    "n.a.",
+    "nil",
+    "unknown",
+    "not known",
+    "not applicable",
+    "-",
+    "--",
+}
 _BLANK = re.compile(r"^_+\s*[a-zA-Z%]*$")
 
 
