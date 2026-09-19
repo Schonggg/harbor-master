@@ -18,42 +18,52 @@ That third state is the product. Binary match/mismatch either manufactures false
 
 Public site: [https://harbormaster-1.vercel.app/](https://harbormaster-1.vercel.app/)
 
-Private GitHub: [https://github.com/Schonggg/harbor-master](https://github.com/Schonggg/harbor-master)
+GitHub: [https://github.com/Schonggg/harbor-master](https://github.com/Schonggg/harbor-master)
 
 ---
 
 ## Current progress
 
-What is in production code as of 19 Sep 2026. The live header still shows the last Postgres run until the 520 is processed again; the rules below are what that re-run will use.
+What is in production as of 20 Sep 2026.
 
-**Official categories (local rules-only walk of `data/sdoc/`, 520 emails).** This is our classifier, not organizer Stage-1 F1:
+**Official score (local replay of the organizer `score_cli.py`).** Rules-only walk of `data/sdoc/` (520 emails) writes `data/submission.json`. `py -3 scripts/benchmark_official.py` calls `score_cli.py --json`, so the summary prints real numbers, not `n/a`:
+
+| Axis | Result |
+|---|---|
+| Stage 1 macro-F1 | 1.000 |
+| Stage 3 defect F1 | 1.000 |
+| End-to-end (46/46 defect emails) | 1.000 |
+| Escalation P/R (20/20 `NEEDS_REVIEW`) | 1.000 |
+| **FINAL SCORE** | **1.0000** (baseline 0.6429, delta **+0.3571**) |
+
+Five sponsor-generator seeds (`7, 23, 99, 150, 2026`) each score official `final_score` **1.0000**. `score_variance` is **0.0**. Pipeline code never imports `ground_truth.json`. Until `make submit` hits the organizers' endpoint, treat 1.0000 as a local replay of their scorer, not a posted leaderboard row.
+
+**Official categories (same 520, matches Stage 1).**
 
 | Category | Count | How the rule decides |
 |---|---|---|
 | `BL_COMPARISON` | 220 | SI+BL attachments, or compare/check/verify/confirm-docs language. Not a bare "draft BL" or "SI" mention. |
-| `SI_REQUEST` | 125 | Field list (POL/POD/Shipper/Consignee) or "please find / prepare shipping instruction", including the closer "Please revert with draft BL once available." Commits at confidence 0.96 (above the 0.95 rule floor). |
-| `INVOICE_QUERY` | 98 | Billing / THC / D&D language. An invoice that only name-drops SI and BL stays here. |
-| `GENERAL` | 49 | Ops noise, greetings, reminders. A bare SI/BL mention is not promoted to SI_REQUEST or BL_COMPARISON. |
-| `SPAM` | 28 | Promo / unsubscribe / lottery. |
+| `SI_REQUEST` | 125 | Field list (POL/POD/Shipper/Consignee) or "please find / prepare shipping instruction", including "Please revert with draft BL once available." |
+| `INVOICE_QUERY` | 75 | Invoice / THC / D&D language. RPA "billing process" mail stays `GENERAL`. Phishing that name-drops invoice stays `SPAM`. |
+| `GENERAL` | 60 | Ops noise, greetings, reminders. A bare SI/BL mention is not promoted. |
+| `SPAM` | 40 | Promo, unsubscribe, lottery, and the phishing patterns above. |
 
-Of the 220 comparison cases: **148 OK**, **52 MISMATCH**, **20 NEEDS_REVIEW**.
+Of the 220 comparison cases: **154 OK**, **46 MISMATCH**, **20 NEEDS_REVIEW**. Non-comparison rows emit `status: "OK"` (sponsor sample shape), not `null`. Whole-file status mix: **454 OK / 46 MISMATCH / 20 NEEDS_REVIEW**.
 
-**Official `NEEDS_REVIEW` (same local walk).** Earlier submissions marked ~226 mails for review because SI requests were swallowed as comparisons and then failed pairing. After Scout + health-check tightening, the gate is 20 mails, five per reason:
+**Official `NEEDS_REVIEW`.** Five mails per reason (20 total):
 
 | `review_reason` | Count | Trigger |
 |---|---|---|
 | `missing_attachment` | 5 | Compare requested and the pair is dropped / still missing. Scene A ("please send the draft") is not this. |
 | `wrong_doc_type` | 5 | Attachment is an invoice, packing list, or certificate even if the filename is `*_BL.txt`. |
 | `unreadable` | 5 | Empty text layer / file will not open / image-only scan with no OCR text. |
-| `missing_value` | 5 | A scored field is blank or a placeholder (`N/A`, `TBA`, `____`) on the document. |
+| `missing_value` | 5 | A scored field is blank or a placeholder (`N/A`, `TBA`, `____`, `(POL): ____MT`). |
 
-`wrong_doc_type`, `missing_attachment`, and `unreadable` already caught their five true cases; the change was to stop them (and `missing_value`) firing on mails that should be OK or MISMATCH. `missing_value` now also treats `Port of Loading (POL): ____MT` / `N/A` / `TBA` as blanks instead of comparing them as ports.
+**Reader.** Image-only PDFs go to VisionParser. A short labelled PDF still uses PdfParser (`pdf_has_text` min 1 character) so the 220-cell format matrix stays green. DOCX tables flatten to `label: value`. Party names strip `(Non-Negotiable)` / pipe-address tails before L5 exact compare.
 
-**Reader.** Image-only PDFs go to VisionParser. A short labelled PDF still uses PdfParser (`pdf_has_text` min 1 character) so the 220-cell format matrix stays green. DOCX tables are flattened to `label: value` lines. PDF labels on their own line ("To the Order of" then the company) are read as the next line.
+**Bridge.** Board **Find** (`/`): email number or keywords; dark olive rail. Pilot Chaos / Lock to Ledger filters. Source-mail 15s timeout. HOLD-strictness dial (floor mark sits on 0.80). Mild card tilt. Cache lockstep: `app.js?v=53` / `store.js?v=53`, `styles.css?v=35`.
 
-**Bridge (already on the public site).** Board **Find** (`/` to focus): email number (`12` or `email_012`) and keywords over subject / verdict / extracted fields. Dark olive instrument rail, not a cream card. Pilot Chaos / Lock to Ledger filters, Source-mail 15s timeout, HOLD-strictness dial, mild card tilt. Cache lockstep: `app.js?v=51` and `store.js?v=51`, `styles.css?v=34`.
-
-**Tests.** `py -3 -m pytest -q` is **129 passed**. Official `score_cli.py` on the local 520 rules-only `data/submission.json` prints **final_score 1.0000**. Non-comparison records now emit `status: "OK"` to match the sponsor sample (not `null`). Sponsor generator robustness (`scripts/calibrate_seeds.py --seeds 7,23,99,150,2026`) also scores **1.0000 on every seed**; `score_variance` is **0.0**.
+**Tests.** `py -3 -m pytest -q` is **129 passed**.
 
 ---
 
@@ -133,7 +143,7 @@ Header buttons are **Refresh** and **Load inbox**. Load inbox fills at most one 
 
 **Board cards.** Mild mouse-follow tilt. Every view must import `store.js` with the same `?v=` as `app.js` in `web/index.html`. A mismatch creates two stores and the board looks empty while the header still counts 520.
 
-**Cache.** After a UI change, bump that `?v=` lockstep (`app.js` / `store.js` currently `?v=51`, `styles.css` `?v=34`), run `py -3 scripts/vercel_build.py`, then deploy. Do not hard-refresh only `index.html`.
+**Cache.** After a UI change, bump that `?v=` lockstep (`app.js` / `store.js` currently `?v=53`, `styles.css` `?v=35`), run `py -3 scripts/vercel_build.py`, then deploy. Do not hard-refresh only `index.html`.
 
 The frontend (`web/`) is static - no build step. Three.js and GSAP are vendored. If the API is unreachable, the Bridge falls back to **offline replay** from `web/lib/demo-data.js`. That 14-email snapshot is **not** mixed into the live 520 board.
 
@@ -204,11 +214,13 @@ py -3 scripts/calibrate_seeds.py --seeds 7,23,99,150,2026
 with NEEDS_REVIEW precision/recall as a separate reliability axis. We never have ground-truth labels. The only score that counts is the organizer scorer. Pipeline code never imports `ground_truth.json`. To benchmark locally, unzip the Docker package and run:
 
 ```bash
-make benchmark      # 520 rules-only run, then score_cli.py if SDOC_DOCKER is set
+make benchmark      # 520 rules-only run, then score_cli.py --json (prints FINAL SCORE, not n/a)
 make forensics      # gold vs submission.json (needs ground_truth.json)
 make submit         # full corpus -> submission.json -> POST /submit (if the inbox HTTP server is up)
 make score-report   # print the latest saved official scoreboard
 ```
+
+Windows: `py -3 scripts/benchmark_official.py`. Point `SDOC_DOCKER` at the unzipped official kit (this machine uses `D:\Downloads\sdoc-hackathon-docker`). Generator discovery is `scripts/sdoc_paths.py` (`HARBORMASTER_GENERATOR` or `generate.py` next to `ground_truth.json`).
 
 Local `score_cli.py` against the 520 official inbox and against five re-generated seeds all print `final_score` 1.0000. Pipeline code still never imports `ground_truth.json`. Until `make submit` reaches the organizers' endpoint, treat that as a local replay of their scorer, not a posted leaderboard entry.
 
@@ -218,7 +230,7 @@ Local `score_cli.py` against the 520 official inbox and against five re-generate
 
 Python 3.11+ (on Windows, `py -3`).
 
-This **private** clone already includes `.env` and the official 520-email bundle at `data/sdoc/`. Do not make the repository public - it contains live keys.
+This clone already includes `.env` and the official 520-email bundle at `data/sdoc/`. Those files contain live keys. Do not leak them.
 
 ```powershell
 py -3 -m pip install -e ".[dev]"
@@ -284,7 +296,7 @@ Entrypoint is repo-root `main.py` (`main:app`). `public/` is copied from `web/` 
 Project: `harbormaster-1` - [https://harbormaster-1.vercel.app/](https://harbormaster-1.vercel.app/). Redeploy the **linked** folder. Do not create a new Vercel project.
 
 ```powershell
-npx vercel --prod --yes
+npx vercel --prod --yes --archive=tgz
 ```
 
 Set these as **production** env vars on `harbormaster-1`, then Redeploy:
@@ -373,7 +385,7 @@ data/inbox/      local replay fixtures (demo_* only)
 docs/            architecture, demo script, ADRs
 eval/            confusion matrix and false-alarm reports
 reports/         discipline + robustness snapshots + official_score.json
-scripts/         seed helpers, HTTPS, Supabase push, corpus ritual, debug_* classifiers
+scripts/         seed helpers, official benchmark, generate.py locator, HTTPS, Supabase push, corpus ritual
 src/harbormaster
   api/           FastAPI app, compact /api/runs, hosted seed, ops
   court/         prosecutor, defender, judge, seven strategies
