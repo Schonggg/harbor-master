@@ -79,14 +79,24 @@ Six operator views, same origin as the API when served by FastAPI:
 |---|---|---|
 | `1` | **Board** | Docket of unique emails. Official subjects, CLEAR / HOLD / PILOT counters. |
 | `2` | **Court** | Charge first (SI vs BL), then one named defence at a time, then the three-state ruling. `R` replays. |
-| `3` | **Pilot** | Human queue. Filters: Lock to Ledger / All / Chaos / Degraded. Case CLEAR or HOLD. Field buttons write Ledger rules. |
+| `3` | **Pilot** | Human queue. Filters: Lock to Ledger / All / Chaos / Degraded. Case CLEAR or HOLD. Field **Lock in Ledger** writes a pair rule. |
 | `4` | **Ledger** | Reusable pair rules: who decided, which writings, which cases replay touched. |
 | `5` | **Chaos** | Four live injectors: LLM timeout, OCR garbage, corrupt attachment, empty email. Smashed cases land in Pilot, not HOLD. |
-| `6` | **Metrics** | First screen: 0 false alarms, 220/220 matrix, 520/520 ritual, live desk mix. Score-sheet / pipeline / system stay folded. |
+| `6` | **Metrics** | Score-sheet KPIs (0 false alarms, 220/220, 520/520), live desk mix, then a **HOLD-strictness dial** that can rewrite this session's header. |
 
 Keyboard: `1-6` switch views, `R` replay court, `Esc` close detail.
 
 Header buttons are **Refresh** and **Load inbox**. Load inbox fills at most one missing official email per request (Vercel 60s cap), then continues in the background until 520.
+
+**Pilot filters.** Chaos lists only smash codes (`CHAOS_INJECTED`, `ATTACHMENT_CORRUPT`, `OCR_GARBLED`, `EMPTY_EMAIL`, `LLM_TIMEOUT`). It never falls back to All. **Lock to Ledger** is only true when an UNCERTAIN or MISMATCH field has both SI and BL writings. An empty lockable queue stays empty. On the current 520 that count is often 0 (one smash case plus degraded Pilot with no pair) - that is correct, not a missing button.
+
+**Source mail.** Opening the original times out at 15s, shows a wait bar, and after 5s notes that a paused database may be waking. Misses cache for 30s so a retry is not a silent hang.
+
+**HOLD strictness (Metrics).** The dial previews a stricter or looser HOLD gate on the **same 520 evidence**. MATCH fields and empty / degraded cards stay as recorded. **Apply to this desk** rewrites this session's header, Board, and Pilot. **Restore recorded 520** (or Refresh) returns the stamps from Postgres. Official `submission.json` is not rewritten. On this corpus leftover mismatch confidence sits around 0.93 and 0.96, so Balanced 0.92 matches the live header and Cautious 0.97 hands those HOLDs to Pilot.
+
+**Board cards.** Mild mouse-follow tilt. Every view must import `store.js` with the same `?v=` as `app.js` in `web/index.html`. A mismatch creates two stores and the board looks empty while the header still counts 520.
+
+**Cache.** After a UI change, bump that `?v=` lockstep, run `py -3 scripts/vercel_build.py`, then deploy. Do not hard-refresh only `index.html`.
 
 The frontend (`web/`) is static - no build step. Three.js and GSAP are vendored. If the API is unreachable, the Bridge falls back to **offline replay** from `web/lib/demo-data.js`. That 14-email snapshot is **not** mixed into the live 520 board.
 
@@ -109,7 +119,7 @@ The Bridge and the graded submission share one pipeline and two contracts.
 - Seven snake_case fields: `shipper`, `consignee`, `notify_party`, `port_of_loading`, `port_of_discharge`, `container_count`, `gross_weight_kg`
 - `decided_by`: `rule` or `llm`
 
-PILOT on the Bridge is a human interrupt. Official `NEEDS_REVIEW` is reserved for unreadable or missing-document cases, not for "the model was unsure." Scene A ("please send draft" with no files) is not `missing_attachment`.
+PILOT on the Bridge is a human interrupt. Official `NEEDS_REVIEW` is reserved for unreadable or missing-document cases, not for "the model was unsure." Unparseable compare values also go to `NEEDS_REVIEW` - they must not silently become `MISMATCH`. Scene A ("please send draft" with no files) is not `missing_attachment`. A structural `wrong_doc_type` is a health check, not an L5 fuzzy match.
 
 ---
 
@@ -268,7 +278,9 @@ Exposed under `/api/ops` and Metrics -> System (folded until opened):
 
 Health endpoints: `/live`, `/ready`, `/health`, `/version`. OpenAPI at `/docs`.
 
-The board payload (`GET /api/runs`) is compact on purpose so 520 cards load inside the function time budget. Compact pleas still keep `strategy` names so Court is not an empty list.
+The board payload (`GET /api/runs`) is compact on purpose so 520 cards load inside the function time budget. Compact pleas still keep `strategy` names so Court is not an empty list. Compact fields include extract confidence and a `lockable` flag so Pilot can sort lockable cases first without a second fetch.
+
+`GET /api/emails/{email_id}` is the Source-mail endpoint. The Bridge waits 15s, not the browser default of 120s (which outlives Vercel's 60s cap and looks frozen).
 
 ---
 
