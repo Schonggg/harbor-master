@@ -7,5 +7,14 @@
       "returncode": 0,
       "scorer": "D:\\Downloads\\sdoc-hackathon-docker\\server\\score_cli.py"
     }
+  },
+  {
+    "recorded_at": "2026-09-19T16:11:33.086914+00:00",
+    "source": "benchmark_official",
+    "scoreboard": {
+      "stdout": "==============================================================\n  SDOC HACKATHON SCORE  —  submission.json\n  520 emails\n==============================================================\n\nSTAGE 1 · Email classification\n  accuracy      1.000  ████████████████████████\n  macro-F1      1.000  ████████████████████████\n  resolved by rules (cost): 100%\n\n  per-category  precision / recall / f1\n    BL_COMPARISON   1.00 / 1.00 / 1.00\n    SI_REQUEST      1.00 / 1.00 / 1.00\n    INVOICE_QUERY   1.00 / 1.00 / 1.00\n    GENERAL         1.00 / 1.00 / 1.00\n    SPAM            1.00 / 1.00 / 1.00\n\nSTAGE 3 · BL-vs-SI comparison  (comparable doc emails)\n  defect recall     1.000  ████████████████████████\n  defect precision  1.000  ████████████████████████\n  field-level F1    1.000  ████████████████████████\n  exact-match rate  1.000\n\nRELIABILITY · escalate what you can't decide  (diagnostic)\n  escalation recall     1.000  ████████████████████████\n  escalation precision  1.000  ████████████████████████\n  gold NEEDS_REVIEW: 20   flagged: 20\n    wrong_doc_type       5/5 escalated\n    missing_attachment   5/5 escalated\n    unreadable           5/5 escalated\n    missing_value        5/5 escalated\n\nEND-TO-END · the headline metric\n  46/46 defect emails caught end to end\n  rate  1.000  ████████████████████████\n\n--------------------------------------------------------------\n  FINAL SCORE  1.0000   (w: s1=0.3, s3=0.2, e2e=0.5)\n--------------------------------------------------------------\n",
+      "returncode": 0,
+      "scorer": "D:\\Downloads\\sdoc-hackathon-docker\\server\\score_cli.py"
+    }
   }
 ]

@@ -143,7 +143,7 @@ def _official_for(state, fields: list[FieldVerdict], verdict: CaseVerdict) -> Em
 
     category = state.scout.category if state.scout else Category.GENERAL
     if category != Category.BL_COMPARISON:
-        return EmailVerdict(category=category)
+        return EmailVerdict(category=category, status=ComparisonStatus.OK)
     health = state.health
     if health and not health.ok:
         return EmailVerdict(

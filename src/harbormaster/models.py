@@ -112,7 +112,7 @@ class EmailVerdict(BaseModel):
     @model_validator(mode="after")
     def _enforce_category_semantics(self) -> EmailVerdict:
         if self.category != Category.BL_COMPARISON:
-            object.__setattr__(self, "status", None)
+            object.__setattr__(self, "status", ComparisonStatus.OK)
             object.__setattr__(self, "review_reason", None)
             object.__setattr__(self, "has_defect", False)
             object.__setattr__(self, "defect_fields", [])
@@ -138,7 +138,7 @@ class EmailVerdict(BaseModel):
 
 
 def blank_verdict(category: Category = Category.GENERAL) -> EmailVerdict:
-    return EmailVerdict(category=category)
+    return EmailVerdict(category=category, status=ComparisonStatus.OK)
 
 
 class Submission(RootModel[dict[str, EmailVerdict]]):

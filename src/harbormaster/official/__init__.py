@@ -29,7 +29,11 @@ def assemble(
 ) -> EmailVerdict:
     """If gate_reason is set, short-circuit to NEEDS_REVIEW. Else OK vs MISMATCH from defects."""
     if category != Category.BL_COMPARISON:
-        verdict = EmailVerdict(category=category, decided_by=decided_by)
+        verdict = EmailVerdict(
+            category=category,
+            status=ComparisonStatus.OK,
+            decided_by=decided_by,
+        )
         _assert_official(verdict)
         return verdict
     if gate_reason is not None:

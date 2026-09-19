@@ -9,7 +9,7 @@ from harbormaster.graph import nodes
 from harbormaster.graph.state import PipelineState
 from harbormaster.ingest.loader_adapter import LoaderAdapter
 from harbormaster.ledger.store import LedgerStore
-from harbormaster.models import Category, EmailMessage, EmailVerdict, RunRequest, RunResult, is_demo_email_id
+from harbormaster.models import Category, ComparisonStatus, EmailMessage, EmailVerdict, RunRequest, RunResult, is_demo_email_id
 from harbormaster.report.submission import write_submission
 
 
@@ -99,7 +99,7 @@ def run_corpus(
             results[email_id] = result.official
         except Exception as exc:  # noqa: BLE001 — corpus must cover every id
             errors[email_id] = str(exc)
-            results[email_id] = EmailVerdict(category=Category.GENERAL)
+            results[email_id] = EmailVerdict(category=Category.GENERAL, status=ComparisonStatus.OK)
         if progress:
             progress(i, len(ids), email_id)
     out_path = _write_best_submission(loader, results, ids)

@@ -43,7 +43,7 @@ def test_official_per_email_shape():
     rec = build_submission(email, card)
     assert set(rec) == REQUIRED_EMAIL_KEYS
     assert rec["category"] in CATEGORIES
-    assert rec["status"] in STATUSES | {None}
+    assert rec["status"] in STATUSES
     assert rec["review_reason"] in REASONS | {None}
     assert rec["has_defect"] is False
     assert rec["defect_fields"] == []

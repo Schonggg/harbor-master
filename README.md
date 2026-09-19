@@ -53,7 +53,7 @@ Of the 220 comparison cases: **148 OK**, **52 MISMATCH**, **20 NEEDS_REVIEW**.
 
 **Bridge (already on the public site).** Board **Find** (`/` to focus): email number (`12` or `email_012`) and keywords over subject / verdict / extracted fields. Dark olive instrument rail, not a cream card. Pilot Chaos / Lock to Ledger filters, Source-mail 15s timeout, HOLD-strictness dial, mild card tilt. Cache lockstep: `app.js?v=51` and `store.js?v=51`, `styles.css?v=34`.
 
-**Tests.** `py -3 -m pytest -q` is **127 passed**. Official `score_cli.py` on the local 520 rules-only `data/submission.json` prints **final_score 1.0000**. Sponsor generator robustness (`scripts/calibrate_seeds.py --seeds 7,23,99,150,2026`) also scores **1.0000 on every seed**; `score_variance` is **0.0**.
+**Tests.** `py -3 -m pytest -q` is **129 passed**. Official `score_cli.py` on the local 520 rules-only `data/submission.json` prints **final_score 1.0000**. Non-comparison records now emit `status: "OK"` to match the sponsor sample (not `null`). Sponsor generator robustness (`scripts/calibrate_seeds.py --seeds 7,23,99,150,2026`) also scores **1.0000 on every seed**; `score_variance` is **0.0**.
 
 ---
 
