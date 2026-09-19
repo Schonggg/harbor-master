@@ -27,17 +27,31 @@ _INVOICE = re.compile(
     r"goods receipt|\bgr\b|d&d|local charge)\b",
     re.I,
 )
+# Comparison only — never a bare "draft BL" / "SI" mention, and never the
+# SI_REQUEST closer "Please revert with draft BL once available."
 _BL_COMPARE = re.compile(
-    r"(si\s*vs\.?\s*bl|bl\s*vs\.?\s*si|draft\s+b/?l|b/?l\s+draft|bill of lading draft|"
-    r"please (?:check|verify|confirm|reconcile).{0,40}(b/?l|bill of lading)|"
-    r"compare.{0,40}(si|shipping instruction).{0,40}(b/?l|bill of lading)|"
-    r"verify the bl matches|check the draft bl against|confirm the bl|"
-    r"discrepan)",
+    r"("
+    r"si\s*vs\.?\s*b/?l|b/?l\s*vs\.?\s*si|"
+    r"compare.{0,60}(?:si|shipping instruction).{0,40}(?:b/?l|bill of lading)|"
+    r"compare.{0,60}(?:b/?l|bill of lading).{0,40}(?:si|shipping instruction)|"
+    r"(?:check|verify) the draft b/?l against|"
+    r"(?:confirm|verify) the (?:draft )?b/?l matches|"
+    r"verify the (?:draft )?b/?l|"
+    r"please (?:check|verify|confirm|reconcile).{0,40}(?:b/?l|bill of lading)|"
+    r"(?:check|verify|confirm|reconcile).{0,30}(?:si|shipping instruction)"
+    r".{0,30}(?:against|vs\.?|with).{0,20}(?:b/?l|bill of lading)|"
+    r"(?:send|provide|share|assist to send).{0,50}(?:draft )?b/?l.{0,40}(?:for )?check|"
+    r"confirm (?:the )?(?:draft )?b/?l is in order|"
+    r"\bto confirm docs\b|"
+    r"request bl draft"
+    r")",
     re.I,
 )
 _SI_REQUEST = re.compile(
-    r"\b((?:please |kindly )?(?:send|issue|prepare|provide|need|request).{0,40}"
-    r"shipping instruction|\bSI\b.{0,20}(needed|required|request|please)|"
+    r"\b((?:please |kindly )?(?:send|issue|prepare|provide|need|request|find).{0,40}"
+    r"(?:shipping instruction|\bSI\b)|"
+    r"\bSI\b.{0,20}(needed|required|request)|"
+    r"(?:request|needed)\s+SI\b|"
     r"new shipping instruction|missing (?:the )?SI)\b",
     re.I,
 )
@@ -49,7 +63,6 @@ _GENERAL = re.compile(
 )
 _FIELD_LIST = re.compile(r"\b(pol|pod|shipper|consignee)\s*:", re.I)
 _HAS_SI = re.compile(r"\b(shipping instruction|\bSI\b)\b", re.I)
-_HAS_BL = re.compile(r"\b(bill of lading|\bB/?L\b|draft bl)\b", re.I)
 
 # Bridge-only finer labels (do not leak "unknown" into official category)
 _DEMO_LABELS: list[tuple[ScoutLabel, re.Pattern[str]]] = [
@@ -75,15 +88,15 @@ def _attachment_kinds(email: EmailMessage) -> tuple[bool, bool]:
     for att in email.attachments:
         hint = (att.kind_hint or "").lower()
         name = f"{att.filename} {att.path}".lower()
-        if hint == "si" or "shipping" in name or re.search(r"\bsi\b", name):
+        if hint == "si" or "shipping" in name or "_si." in name or "-si." in name or re.search(r"\bsi\b", name):
             has_si = True
-        if hint == "bl" or "lading" in name or re.search(r"\bbl\b", name) or "bol" in name:
+        if hint == "bl" or "lading" in name or "_bl." in name or "-bl." in name or re.search(r"\bbl\b", name) or "bol" in name:
             has_bl = True
     for path in email.attachment_paths:
         name = path.lower()
-        if "shipping" in name or re.search(r"\bsi\b", name):
+        if "shipping" in name or "_si." in name or "-si." in name or re.search(r"\bsi\b", name):
             has_si = True
-        if "lading" in name or re.search(r"\bbl\b", name) or "bol" in name:
+        if "lading" in name or "_bl." in name or "-bl." in name or re.search(r"\bbl\b", name) or "bol" in name:
             has_bl = True
     body = email.body_text
     if "=== SHIPPING INSTRUCTION" in body:
@@ -93,9 +106,15 @@ def _attachment_kinds(email: EmailMessage) -> tuple[bool, bool]:
     return has_si, has_bl
 
 
+def _si_request_text(blob: str) -> bool:
+    return bool(_SI_REQUEST.search(blob) or len(_FIELD_LIST.findall(blob)) >= 2)
+
+
 def official_rule_classify(email: EmailMessage) -> ScoutResult | None:
     blob = _blob(email)
     has_si, has_bl = _attachment_kinds(email)
+    bl_compare = bool(_BL_COMPARE.search(blob))
+    si_text = _si_request_text(blob)
 
     if _SPAM.search(blob) and not has_si and not has_bl and not _INVOICE.search(blob):
         return ScoutResult(
@@ -113,12 +132,22 @@ def official_rule_classify(email: EmailMessage) -> ScoutResult | None:
             reason="rule:si+bl attachments",
             route="rules",
         )
-    if _BL_COMPARE.search(blob):
+    if bl_compare:
         return ScoutResult(
             category=Category.BL_COMPARISON,
             label=ScoutLabel.BILL_OF_LADING,
             confidence=0.95,
             reason="rule:bl-comparison language",
+            route="rules",
+        )
+    # SI_REQUEST before invoice: SI bodies often list "Original invoice" as a
+    # required document, which must not steal the field-list SI branch.
+    if si_text:
+        return ScoutResult(
+            category=Category.SI_REQUEST,
+            label=ScoutLabel.SHIPPING_INSTRUCTION,
+            confidence=0.96,
+            reason="rule:si-request",
             route="rules",
         )
     if _INVOICE.search(blob) and not has_si:
@@ -137,27 +166,11 @@ def official_rule_classify(email: EmailMessage) -> ScoutResult | None:
             reason="rule:general-ops",
             route="rules",
         )
-    if (_SI_REQUEST.search(blob) or len(_FIELD_LIST.findall(blob)) >= 2) and not _BL_COMPARE.search(blob):
-        return ScoutResult(
-            category=Category.SI_REQUEST,
-            label=ScoutLabel.SHIPPING_INSTRUCTION,
-            confidence=0.94,
-            reason="rule:si-request",
-            route="rules",
-        )
-    if has_bl and _HAS_SI.search(blob):
-        return ScoutResult(
-            category=Category.BL_COMPARISON,
-            label=ScoutLabel.BILL_OF_LADING,
-            confidence=0.9,
-            reason="rule:bl+si mentions",
-            route="rules",
-        )
     if has_si and not has_bl and _HAS_SI.search(email.subject):
         return ScoutResult(
             category=Category.SI_REQUEST,
             label=ScoutLabel.SHIPPING_INSTRUCTION,
-            confidence=0.88,
+            confidence=0.95,
             reason="rule:si-only",
             route="rules",
         )
@@ -182,6 +195,13 @@ def demo_label(email: EmailMessage) -> ScoutLabel | None:
     return None
 
 
+_MENTION_ONLY = {
+    ScoutLabel.SHIPPING_INSTRUCTION,
+    ScoutLabel.BILL_OF_LADING,
+    ScoutLabel.DISCREPANCY_QUERY,
+}
+
+
 def rule_classify(email: EmailMessage) -> ScoutResult | None:
     """Official category first; Bridge scout label is a parallel view."""
     official = official_rule_classify(email)
@@ -190,6 +210,16 @@ def rule_classify(email: EmailMessage) -> ScoutResult | None:
         if label and label != ScoutLabel.UNKNOWN:
             return official.model_copy(update={"label": label})
         return official
+    if label in _MENTION_ONLY:
+        # A bare SI/BL/discrepancy mention is not an official SI_REQUEST or
+        # BL_COMPARISON. Those categories only come from official_rule_classify.
+        return ScoutResult(
+            category=Category.GENERAL,
+            label=label,
+            confidence=0.9,
+            reason=f"rule:demo-label:{label.value}",
+            route="rules",
+        )
     if label:
         return ScoutResult(
             category=SCOUT_TO_CATEGORY.get(label, Category.GENERAL),
