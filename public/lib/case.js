@@ -1,7 +1,7 @@
 // Case-level derived text: one-line summaries, pilot reasons, ledger references.
 import { FIELD_ORDER, fieldZh, strategyZh, failureZh } from "./copy.js";
-import { shortId } from "./dom.js?v=60";
-import { SEVEN_FIELDS, effectiveState, pairWritings, present } from "./field-display.js?v=60";
+import { shortId } from "./dom.js?v=61";
+import { SEVEN_FIELDS, effectiveState, pairWritings, present } from "./field-display.js?v=61";
 
 export function card(run) {
   return run?.payload?.card || {};

@@ -22,6 +22,7 @@ export const FIELDS = {
   gross_weight_kg: { zh: "Gross Weight (kg)", en: "Gross Weight (kg)" },
   gross_weight: { zh: "Gross Weight", en: "Gross Weight" },
   vessel_voyage: { zh: "Vessel / Voyage", en: "Vessel / Voyage" },
+  case: { zh: "Case stamp", en: "Case stamp" },
 };
 
 export function fieldZh(name) {

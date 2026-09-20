@@ -12,6 +12,87 @@ from harbormaster.models import CaseVerdict, ComparisonStatus, EmailVerdict, Pil
 
 router = APIRouter()
 
+CASE_FIELD = "case"
+
+
+def _find_run(case_id: str) -> dict | None:
+    return LedgerStore().get_run_by_ref(case_id)
+
+
+def _fv_writings(fv: dict) -> tuple[str, str, str]:
+    charge = fv.get("charge") or {}
+    left = str((charge.get("left") or {}).get("raw_value") or fv.get("left_value") or "").strip()
+    right = str((charge.get("right") or {}).get("raw_value") or fv.get("right_value") or "").strip()
+    field = str(fv.get("field") or "").strip()
+    return field, left, right
+
+
+def _lockable_pairs(card: dict, verdict: str = "CLEAR") -> list[tuple[str, str, str]]:
+    """SI/BL writings a human stamp can teach. CLEAR also keeps two-way MATCH pairs."""
+    out: list[tuple[str, str, str]] = []
+    for fv in card.get("field_verdicts") or []:
+        if not isinstance(fv, dict):
+            continue
+        if str(fv.get("rationale") or "").startswith("ledger"):
+            continue
+        field, left, right = _fv_writings(fv)
+        if not field or field == CASE_FIELD or not left or not right:
+            continue
+        state = fv.get("state")
+        if state in {"UNCERTAIN", "MISMATCH"}:
+            out.append((field, left, right))
+        elif verdict == "CLEAR" and state == "MATCH":
+            if " ".join(left.upper().split()) != " ".join(right.upper().split()):
+                out.append((field, left, right))
+    return out
+
+
+def _promote_one(store: LedgerStore, promoter: Promoter, case_id: str, field: str, left: str, right: str, body: CaseVerdictBody, decision: PilotDecision) -> dict | None:
+    if store.find_matching_rule(field, left, right):
+        return None
+    review = PilotReview(
+        case_id=case_id,
+        field=field,
+        decision=decision,
+        promote_to_ledger=True,
+        reviewer=body.reviewer,
+        note=body.note or f"case {body.verdict}",
+    )
+    rule = promoter.promote(review, left, right)
+    if not rule:
+        return None
+    return rule.model_dump(mode="json")
+
+
+def _promote_pairs_for_verdict(store: LedgerStore, case_id: str, card: dict, body: CaseVerdictBody, email_id: str = "") -> tuple[list[dict], int]:
+    """Every Pilot CLEAR/HOLD lands on the ledger. Contested (and two-way MATCH) pairs also replay."""
+    pair_decision = (
+        PilotDecision.ACCEPT_AS_MATCH if body.verdict == "CLEAR" else PilotDecision.CONFIRM_MISMATCH
+    )
+    promoter = Promoter(store)
+    replayed = 0
+    rules: list[dict] = []
+    for field, left, right in _lockable_pairs(card, body.verdict):
+        dumped = _promote_one(store, promoter, case_id, field, left, right, body, pair_decision)
+        if not dumped:
+            continue
+        replayed += int((Replayer(store).replay(dumped["rule_id"]) or {}).get("updated") or 0)
+        rules.append(dumped)
+    stamp_left = str(card.get("email_id") or email_id or case_id).strip()
+    stamp = _promote_one(
+        store,
+        promoter,
+        case_id,
+        CASE_FIELD,
+        stamp_left,
+        body.verdict,
+        body,
+        pair_decision,
+    )
+    if stamp:
+        rules.append(stamp)
+    return rules, replayed
+
 
 class ReviewBody(BaseModel):
     case_id: str
@@ -29,56 +110,6 @@ class CaseVerdictBody(BaseModel):
     verdict: Literal["CLEAR", "HOLD"]
     reviewer: str = "pilot"
     note: str = ""
-
-
-def _find_run(case_id: str) -> dict | None:
-    return LedgerStore().get_run_by_ref(case_id)
-
-
-def _lockable_pairs(card: dict) -> list[tuple[str, str, str]]:
-    """SI/BL writings a human stamp can teach the ledger. No pair → nothing to replay."""
-    out: list[tuple[str, str, str]] = []
-    for fv in card.get("field_verdicts") or []:
-        if not isinstance(fv, dict):
-            continue
-        if fv.get("state") not in {"UNCERTAIN", "MISMATCH"}:
-            continue
-        if str(fv.get("rationale") or "").startswith("ledger"):
-            continue
-        charge = fv.get("charge") or {}
-        left = str((charge.get("left") or {}).get("raw_value") or fv.get("left_value") or "").strip()
-        right = str((charge.get("right") or {}).get("raw_value") or fv.get("right_value") or "").strip()
-        field = str(fv.get("field") or "").strip()
-        if field and left and right:
-            out.append((field, left, right))
-    return out
-
-
-def _promote_pairs_for_verdict(store: LedgerStore, case_id: str, card: dict, body: CaseVerdictBody) -> tuple[list[dict], int]:
-    """Closing CLEAR/HOLD teaches remaining contested pairs so later mail can reuse the ruling."""
-    decision = (
-        PilotDecision.ACCEPT_AS_MATCH if body.verdict == "CLEAR" else PilotDecision.CONFIRM_MISMATCH
-    )
-    promoter = Promoter(store)
-    replayed = 0
-    rules: list[dict] = []
-    for field, left, right in _lockable_pairs(card):
-        if store.find_matching_rule(field, left, right):
-            continue
-        review = PilotReview(
-            case_id=case_id,
-            field=field,
-            decision=decision,
-            promote_to_ledger=True,
-            reviewer=body.reviewer,
-            note=body.note or f"case {body.verdict}",
-        )
-        rule = promoter.promote(review, left, right)
-        if not rule:
-            continue
-        replayed += int((Replayer(store).replay(rule.rule_id) or {}).get("updated") or 0)
-        rules.append(rule.model_dump(mode="json"))
-    return rules, replayed
 
 
 @router.get("/review/queue")
@@ -113,7 +144,13 @@ def set_case_verdict(body: CaseVerdictBody):
     store = LedgerStore()
     payload = dict(run.get("payload") or {})
     card = dict(payload.get("card") or {})
-    rules, replayed = _promote_pairs_for_verdict(store, run.get("case_id") or body.case_id, card, body)
+    rules, replayed = _promote_pairs_for_verdict(
+        store,
+        run.get("case_id") or body.case_id,
+        card,
+        body,
+        email_id=str(run.get("email_id") or ""),
+    )
     fresh = _find_run(body.case_id) or run
     payload = dict(fresh.get("payload") or payload)
     card = dict(payload.get("card") or card)

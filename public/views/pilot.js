@@ -1,11 +1,11 @@
 // ③ Pilot deck — the human in the loop. One decision becomes a ledger rule, the
 // ledger replays history, and the queue visibly collapses.
-import { store as bridgeStore } from "../lib/store.js?v=60";
-import { esc, $, $$, on, shortId, diffChars, renderDiff, fmtUsd, sourceWaitHtml } from "../lib/dom.js?v=60";
+import { store as bridgeStore } from "../lib/store.js?v=61";
+import { esc, $, $$, on, shortId, diffChars, renderDiff, fmtUsd, sourceWaitHtml } from "../lib/dom.js?v=61";
 import { gsap, reduced, enter, countTo, collapseOut, pulse } from "../lib/motion.js";
 import { fieldZh, fieldEn, RISK, failureZh } from "../lib/copy.js";
-import { card, orderedFields, pilotReasons, ledgerRef, confidenceOf } from "../lib/case.js?v=60";
-import { effectiveState, present } from "../lib/field-display.js?v=60";
+import { card, orderedFields, pilotReasons, ledgerRef, confidenceOf } from "../lib/case.js?v=61";
+import { effectiveState, present } from "../lib/field-display.js?v=61";
 
 export function mount(root, ctx, params = {}) {
   const store = ctx.store || bridgeStore;
@@ -417,7 +417,7 @@ export function mount(root, ctx, params = {}) {
       pulse($("#qn", root), 1.25);
       renderMain(true);
       ctx.toast(out.rules?.length
-        ? `Mail → ${verdict}. Locked ${out.rules.length} pair${out.rules.length === 1 ? "" : "s"} to Ledger`
+        ? `Mail → ${verdict}. Wrote ${out.rules.length} ledger row${out.rules.length === 1 ? "" : "s"}`
         : `Mail → ${verdict}. Queue ${out.queue_before} → ${out.queue_after}`, "ok", 5000);
     } catch (e) {
       ctx.toast(`Ruling failed: ${e.message}`, "err");

@@ -5,7 +5,7 @@
 //   offline — replays captured payloads from demo-data.js and simulates the
 //             ledger/replay loop client-side so the demo still tells its story
 //             on a static HTTPS host.
-import { request, API_BASE, ApiError, discoverApiBase, EMAIL_GET_TIMEOUT_MS, markReviewed as postReviewed } from "./api.js?v=60";
+import { request, API_BASE, ApiError, discoverApiBase, EMAIL_GET_TIMEOUT_MS, markReviewed as postReviewed } from "./api.js?v=61";
 import { DEMO_RUNS, DEMO_EMAILS, DEMO_CHAOS, DEMO_AUTONOMY } from "./demo-data.js";
 
 const clone = (v) => (typeof structuredClone === "function" ? structuredClone(v) : JSON.parse(JSON.stringify(v)));
@@ -291,7 +291,7 @@ class Store extends EventTarget {
     }, "refresh");
     this.prefetchEmails(decorated).catch(() => {});
     Promise.all([
-      request("/api/ledger", { timeout: 8000 }).catch(() => []),
+      request("/api/ledger", { timeout: 20000 }).catch(() => null),
       request("/api/metrics", { timeout: 20000 }).catch(() => null),
       request("/api/autonomy", { timeout: 8000 }).catch(() => null),
     ]).then(([ledger, metrics, autonomy]) => {
@@ -299,11 +299,20 @@ class Store extends EventTarget {
         ? { ...local, ...metrics, exposure_usd: local.exposure_usd, degraded_runs: local.degraded_runs, confusion: local.confusion, verdict_counts: local.verdict_counts || metrics.verdict_counts, runs: decorated.length }
         : local;
       this.set({
-        ledger,
+        ledger: Array.isArray(ledger) ? ledger : this.state.ledger,
         metrics: merged,
         autonomy: autonomy || this.state.autonomy,
       }, "refresh-aux");
     });
+  }
+
+  _mergeLedger(rules) {
+    const incoming = (Array.isArray(rules) ? rules : [rules]).filter((r) => r?.rule_id);
+    if (!incoming.length) return;
+    const have = new Set((this.state.ledger || []).map((r) => r.rule_id));
+    const extra = incoming.filter((r) => !have.has(r.rule_id));
+    if (!extra.length) return;
+    this.set({ ledger: [...extra, ...(this.state.ledger || [])] }, "ledger");
   }
 
   _emailMissFresh(emailId) {
@@ -532,9 +541,10 @@ class Store extends EventTarget {
           this.set({ runs: patchRuns(this.state.runs, out.reply_draft) }, "decide");
         }
         this._pendingVerdicts.delete(caseId);
-        await this.refresh().catch(() => {});
         result.rules = out?.rules || [];
         result.replay = out?.replay || { updated: 0 };
+        this._mergeLedger(result.rules);
+        await this.refresh().catch(() => {});
         const after = new Set(this.pilotQueue().map((r) => r.run_id));
         result.released = before.filter((id) => !after.has(id));
         result.queue_after = after.size;
@@ -557,6 +567,7 @@ class Store extends EventTarget {
           method: "POST",
           body: { case_id: caseId, field, decision, left_value: left, right_value: right, promote_to_ledger: true, reviewer: "pilot", note },
         });
+        this._mergeLedger(out?.rule ? [out.rule] : []);
         await this.refresh();
       } else {
         out = this._offlineDecide({ caseId, field, decision, left, right, note });
@@ -626,6 +637,11 @@ class Store extends EventTarget {
       if (this.state.ledger.some((r) => r.active !== false && r.field === fv.field && r.normalized_key === key)) continue;
       const out = this._offlineDecide({ caseId, field: fv.field, decision, left, right, note: note || `case ${verdict}` });
       if (out?.rule) rules.push(out.rule);
+    }
+    const emailId = run?.email_id || caseId;
+    if (!this.state.ledger.some((r) => r.active !== false && r.field === "case" && r.left_pattern === emailId && r.right_pattern === verdict)) {
+      const stamp = this._offlineDecide({ caseId, field: "case", decision, left: emailId, right: verdict, note: note || `case ${verdict}` });
+      if (stamp?.rule) rules.push(stamp.rule);
     }
     return rules;
   }

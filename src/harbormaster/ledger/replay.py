@@ -28,6 +28,10 @@ class Replayer:
                 charge = fv.get("charge") or {}
                 left = (charge.get("left") or {}).get("raw_value", "")
                 right = (charge.get("right") or {}).get("raw_value", "")
+                if not str(left).strip() or not str(right).strip():
+                    continue
+                if rule.field == "case":
+                    continue
                 from harbormaster.ledger.store import normalized_pair_key
 
                 if normalized_pair_key(left, right) != rule.normalized_key:

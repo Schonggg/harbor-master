@@ -32,7 +32,9 @@ def test_human_can_close_pilot_mail_as_clear_or_hold(tmp_path, monkeypatch):
 
     out = set_case_verdict(CaseVerdictBody(case_id="case-pilot", verdict="CLEAR", reviewer="pilot"))
     assert out["verdict"] == "CLEAR"
-    assert out.get("rules") == []
+    assert len(out.get("rules") or []) == 1
+    assert out["rules"][0]["field"] == "case"
+    assert out["rules"][0]["left_pattern"] == "demo_weight_hold"
     assert out.get("reply_draft")
     rows = store.list_runs()
     assert rows[0]["verdict"] == "CLEAR"
@@ -76,18 +78,36 @@ def test_closing_pilot_mail_teaches_remaining_si_bl_pairs(tmp_path, monkeypatch)
 
     out = set_case_verdict(CaseVerdictBody(case_id="case-teach", verdict="CLEAR", reviewer="pilot"))
     assert out["verdict"] == "CLEAR"
-    assert len(out["rules"]) == 1
-    assert out["rules"][0]["field"] == "shipper"
-    assert out["rules"][0]["decision"] == "accept_as_match"
+    fields = {r["field"] for r in out["rules"]}
+    assert fields == {"shipper", "case"}
+    assert any(r["field"] == "shipper" and r["decision"] == "accept_as_match" for r in out["rules"])
     rules = store.list_rules(active_only=True)
-    assert len(rules) == 1
+    assert {r.field for r in rules} == {"shipper", "case"}
     taught = store.get_run_by_ref("case-teach")
     assert taught["verdict"] == "CLEAR"
     twin = store.get_run_by_ref("case-twin")
     assert twin["payload"]["card"]["field_verdicts"][0]["state"] == "MATCH"
     again = set_case_verdict(CaseVerdictBody(case_id="case-teach", verdict="CLEAR", reviewer="pilot"))
     assert again["rules"] == []
-    assert len(store.list_rules(active_only=True)) == 1
+    assert len(store.list_rules(active_only=True)) == 2
+
+
+def test_three_pilot_clears_each_write_a_ledger_row(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "")
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "harbormaster.db"))
+    clear_caches()
+    store = LedgerStore()
+    from harbormaster.api.routes.review import CaseVerdictBody, set_case_verdict
+
+    for n in ("email_a", "email_b", "email_c"):
+        store.save_run(f"run-{n}", f"case-{n}", n, "PILOT", {"card": {"verdict": "PILOT", "email_id": n}})
+        out = set_case_verdict(CaseVerdictBody(case_id=f"case-{n}", verdict="CLEAR", reviewer="pilot"))
+        assert len(out["rules"]) == 1
+        assert out["rules"][0]["field"] == "case"
+    rules = store.list_rules(active_only=True)
+    assert len(rules) == 3
+    assert {r.left_pattern for r in rules} == {"email_a", "email_b", "email_c"}
 
 
 def test_save_run_keeps_one_row_per_email(tmp_path, monkeypatch):
