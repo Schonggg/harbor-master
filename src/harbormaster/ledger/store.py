@@ -354,6 +354,35 @@ class LedgerStore:
             out = [r for r in out if not is_demo_email_id(r["email_id"])]
         return out
 
+    def list_human_closed_runs(self) -> list[dict]:
+        """Unique-email runs a Pilot human closed as CLEAR or HOLD."""
+        with self._connect() as conn:
+            sql = """
+                SELECT run_id, case_id, email_id, verdict, payload_json, created_at
+                FROM case_runs
+                WHERE verdict IN ('CLEAR', 'HOLD')
+                  AND (payload_json LIKE ? OR payload_json LIKE ?)
+            """
+            params: tuple = ('%"pilot_override": true%', '%"pilot_override":true%')
+            if self.dsn:
+                sql += " AND email_id NOT LIKE ?"
+                params = params + ("demo_%",)
+            sql += " ORDER BY created_at DESC"
+            rows = conn.execute(sql, params).fetchall()
+        out: list[dict] = []
+        seen: set[str] = set()
+        for r in rows:
+            email_id = r["email_id"]
+            if email_id in seen or is_demo_email_id(email_id):
+                continue
+            seen.add(email_id)
+            run = _run_from_row(r)
+            card = (run.get("payload") or {}).get("card") or {}
+            if not card.get("pilot_override"):
+                continue
+            out.append(run)
+        return out
+
     def get_run_by_ref(self, ref: str) -> dict | None:
         """Lookup by run_id, case_id, or email_id without scanning every payload."""
         if not ref:

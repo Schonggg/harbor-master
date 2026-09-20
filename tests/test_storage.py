@@ -110,6 +110,32 @@ def test_three_pilot_clears_each_write_a_ledger_row(tmp_path, monkeypatch):
     assert {r.left_pattern for r in rules} == {"email_a", "email_b", "email_c"}
 
 
+def test_ledger_backfills_older_pilot_stamps_without_pairs(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "")
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "harbormaster.db"))
+    monkeypatch.delenv("HARBORMASTER_API_KEY", raising=False)
+    clear_caches()
+    store = LedgerStore()
+    for n in ("email_old_1", "email_old_2", "email_old_3"):
+        store.save_run(
+            f"run-{n}",
+            f"case-{n}",
+            n,
+            "CLEAR",
+            {"card": {"verdict": "CLEAR", "email_id": n, "pilot_override": True, "pilot_override_by": "pilot"}},
+        )
+    assert store.list_rules() == []
+    from harbormaster.api.main import app
+
+    rows = TestClient(app).get("/api/ledger").json()
+    assert len(rows) == 3
+    assert {r["field"] for r in rows} == {"case"}
+    assert {r["left_pattern"] for r in rows} == {"email_old_1", "email_old_2", "email_old_3"}
+    again = TestClient(app).get("/api/ledger").json()
+    assert len(again) == 3
+
+
 def test_save_run_keeps_one_row_per_email(tmp_path, monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "")
     monkeypatch.setenv("DATA_DIR", str(tmp_path))
