@@ -1225,11 +1225,20 @@ select.ctl, input.ctl {
 .extra-ftable { margin-top: 0.15rem; }
 .frow.s-MATCH .fval { color: var(--text-2); }
 .frow.s-MISMATCH .fval { color: var(--text); font-weight: 550; }
-.fval mark {
-  background: color-mix(in srgb, var(--hold) 42%, transparent);
-  color: var(--text);
-  padding: 0 0.08em;
-  border-radius: 2px;
+.fval mark,
+.versus .side b mark,
+.evidence-pane .val mark,
+mark.delta {
+  background: color-mix(in srgb, var(--hold) 18%, transparent);
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  padding: 0.05em 0.14em 0.08em;
+  border-radius: 0.18em;
+  box-shadow: none;
+  text-decoration: none;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 .locode {
   display: inline-block;
@@ -1315,13 +1324,6 @@ select.ctl, input.ctl {
 .evidence-pane .val mark {
   display: inline;
 }
-.evidence-pane .val mark {
-  background: var(--pilot-soft);
-  color: var(--pilot);
-  border-radius: 4px;
-  padding: 0 0.08em;
-  box-shadow: inset 0 -2px 0 var(--pilot);
-}
 .evidence-pane .src { font-size: 0.8rem; color: var(--text-2); display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
 .conf {
   display: inline-flex;
@@ -1371,7 +1373,7 @@ select.ctl, input.ctl {
   padding: 0 0.15em;
   box-shadow: 0 0 0 1px rgba(243, 195, 79, 0.5);
 }
-.source-text mark.si { background: var(--signal-soft); color: var(--signal); box-shadow: 0 0 0 1px rgba(192, 120, 56), 0.5); }
+.source-text mark.si { background: var(--signal-soft); color: var(--signal); box-shadow: 0 0 0 1px rgba(192, 120, 56, 0.5); }
 .source-text .hd { color: var(--text); font-weight: 600; }
 .source-wait {
   display: grid;
@@ -1531,9 +1533,9 @@ select.ctl, input.ctl {
   font-family: var(--font-mono);
   font-weight: 600;
   color: var(--hold);
-  border: 1px solid rgba(255, 93, 79, 0.5);
+  border: 1px solid color-mix(in srgb, var(--hold) 48%, var(--line));
   background: var(--hold-soft);
-  box-shadow: 0 0 30px rgba(255, 93, 79, 0.25);
+  box-shadow: 0 0 28px color-mix(in srgb, var(--hold) 22%, transparent);
 }
 
 .pleas { position: relative; display: grid; gap: 0.6rem; padding-left: 1.6rem; }
@@ -1776,7 +1778,7 @@ select.ctl, input.ctl {
   align-items: center;
   padding: 1rem 1.2rem;
   border-radius: 14px;
-  border: 1px solid rgba(192, 120, 56), 0.45);
+  border: 1px solid rgba(192, 120, 56, 0.45);
   background: linear-gradient(90deg, var(--signal-soft), transparent);
 }
 .rule-stamp .seal {
@@ -1910,7 +1912,7 @@ select.ctl, input.ctl {
 .step .codes { min-width: 0; }
 .step .chip { white-space: normal; max-width: 100%; }
 .step.active { opacity: 1; border-color: var(--line-strong); background: rgba(255, 255, 255, 0.045); }
-.step.active .n { border-color: var(--signal); color: var(--signal); box-shadow: 0 0 20px rgba(192, 120, 56), 0.25); }
+.step.active .n { border-color: var(--signal); color: var(--signal); box-shadow: 0 0 20px rgba(192, 120, 56, 0.25); }
 .step.done { opacity: 1; }
 .step.done .n { background: var(--clear); border-color: var(--clear); color: var(--ink-0); }
 .step.alarm .n { background: var(--hold); border-color: var(--hold); color: #fff; box-shadow: 0 0 24px rgba(255, 93, 79, 0.45); }
@@ -2048,7 +2050,7 @@ input[type="range"].dial::-webkit-slider-thumb {
   border-radius: 50%;
   background: var(--text);
   border: 4px solid var(--ink-0);
-  box-shadow: 0 0 0 2px var(--signal), 0 0 24px rgba(192, 120, 56), 0.5);
+  box-shadow: 0 0 0 2px var(--signal), 0 0 24px rgba(192, 120, 56, 0.5);
   cursor: grab;
 }
 input[type="range"].dial::-moz-range-thumb {

@@ -65,13 +65,15 @@ export function diffChars(a, b) {
   b = String(b ?? "");
   const n = a.length;
   const m = b.length;
+  const sameChar = (x, y) => x === y || x.toLowerCase() === y.toLowerCase();
   if (n * m > 40000) {
-    return [a.split("").map((ch) => ({ ch, same: a === b })), b.split("").map((ch) => ({ ch, same: a === b }))];
+    const eq = a.toLowerCase() === b.toLowerCase();
+    return [a.split("").map((ch) => ({ ch, same: eq })), b.split("").map((ch) => ({ ch, same: eq }))];
   }
   const dp = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
   for (let i = n - 1; i >= 0; i--) {
     for (let j = m - 1; j >= 0; j--) {
-      dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+      dp[i][j] = sameChar(a[i], b[j]) ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
     }
   }
   const left = [];
@@ -79,7 +81,7 @@ export function diffChars(a, b) {
   let i = 0;
   let j = 0;
   while (i < n && j < m) {
-    if (a[i] === b[j]) {
+    if (sameChar(a[i], b[j])) {
       left.push({ ch: a[i], same: true });
       right.push({ ch: b[j], same: true });
       i++;
@@ -98,12 +100,16 @@ export function diffChars(a, b) {
 }
 
 export function renderDiff(parts) {
+  if (!parts?.length) return "";
+  const marked = parts.reduce((n, p) => n + (p.same ? 0 : 1), 0);
+  const text = parts.map((p) => p.ch).join("");
+  if (marked / parts.length > 0.62) return esc(text);
   let out = "";
   let buf = "";
   let mode = null;
   const flush = () => {
     if (!buf) return;
-    out += mode ? esc(buf) : `<mark>${esc(buf)}</mark>`;
+    out += mode ? esc(buf) : `<mark class="delta">${esc(buf)}</mark>`;
     buf = "";
   };
   for (const p of parts) {

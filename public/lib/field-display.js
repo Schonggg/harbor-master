@@ -4,6 +4,7 @@
 const PORTS = new Set(["port_of_loading", "port_of_discharge"]);
 const PARTIES = new Set(["shipper", "consignee", "notify_party"]);
 const ROLE = /^(notify(?:\s+party)?|consignee|shipper|name|voyage|vessel(?:\s*\/\s*voyage)?)\s*:\s*/i;
+const PARTY_WRAP = /^(?:\(?non[-\s]?negotiable\)?|(?:party\/?\s*)?intermediate\s*consignee(?:\s*\([^)]*\))?)\s*:?\s*/i;
 const PAREN = /\(([^)]*)\)/g;
 const LOCODE = /^[A-Z]{5}$/;
 
@@ -149,8 +150,8 @@ export function valueFromBody(body, side, field) {
 
 function stripRole(raw) {
   let text = String(raw || "").trim();
-  for (let i = 0; i < 4; i++) {
-    const next = text.replace(ROLE, "").trim();
+  for (let i = 0; i < 6; i++) {
+    const next = text.replace(ROLE, "").replace(PARTY_WRAP, "").trim();
     if (next === text) break;
     text = next;
   }

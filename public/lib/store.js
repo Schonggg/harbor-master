@@ -52,6 +52,7 @@ export function rollup(fieldVerdicts) {
  * confidence gate moves. Returns a new card; does not mutate.
  */
 export function reAdjudicate(card, floor, extractMin = 0.75) {
+  if (!card) return { field_verdicts: [], verdict: "PILOT" };
   const recorded = card.verdict;
   let gated = 0;
   const fvs = (card.field_verdicts || []).map((fv) => {
