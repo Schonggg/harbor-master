@@ -118,3 +118,9 @@ CREATE TABLE IF NOT EXISTS inbox_emails (
 );
 
 CREATE INDEX IF NOT EXISTS idx_inbox_source ON inbox_emails(source, email_id);
+
+CREATE TABLE IF NOT EXISTS reviewed_marks (
+    email_id TEXT PRIMARY KEY,
+    reviewed_by TEXT NOT NULL DEFAULT '',
+    reviewed_at TEXT NOT NULL
+);

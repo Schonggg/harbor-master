@@ -160,22 +160,38 @@ def list_runs():
     rows = store.list_runs()
     if store.backend == "postgres":
         rows = [r for r in rows if not is_demo_email_id(r.get("email_id"))]
-    return [
-        {
-            "run_id": r["run_id"],
-            "case_id": r["case_id"],
-            "email_id": r["email_id"],
-            "verdict": r["verdict"],
-            "created_at": r["created_at"],
-            "payload": _board_payload(r.get("payload") or {}),
-        }
-        for r in rows
-    ]
+    reviewed_ids = store.list_reviewed_email_ids()
+    out = []
+    for r in rows:
+        payload = _board_payload(r.get("payload") or {})
+        filed = r.get("email_id") in reviewed_ids
+        card = dict(payload.get("card") or {})
+        card["reviewed"] = filed
+        payload["card"] = card
+        out.append(
+            {
+                "run_id": r["run_id"],
+                "case_id": r["case_id"],
+                "email_id": r["email_id"],
+                "verdict": r["verdict"],
+                "created_at": r["created_at"],
+                "reviewed": filed,
+                "payload": payload,
+            }
+        )
+    return out
 
 
 @router.get("/runs/{run_id}")
 def get_run(run_id: str):
-    row = LedgerStore().get_run(run_id)
+    store = LedgerStore()
+    row = store.get_run(run_id)
     if not row:
         raise HTTPException(status_code=404, detail="run not found")
-    return row
+    eid = row.get("email_id")
+    filed = bool(eid) and eid in store.list_reviewed_email_ids()
+    payload = dict(row.get("payload") or {})
+    card = dict(payload.get("card") or {})
+    card["reviewed"] = filed
+    payload["card"] = card
+    return {**row, "reviewed": filed, "payload": payload}

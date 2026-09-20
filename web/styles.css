@@ -827,6 +827,128 @@ select.ctl, input.ctl {
   align-items: flex-end;
   gap: 1rem;
 }
+.docket-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-shrink: 0;
+}
+.folder-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  border: 1px solid rgba(197, 212, 106, 0.42);
+  background: #12140f;
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 0.52rem 0.8rem 0.46rem;
+  cursor: pointer;
+}
+.folder-link b {
+  font-weight: 700;
+  color: var(--hub-clear);
+}
+.folder-link .folder-action {
+  color: rgba(239, 231, 212, 0.62);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.66rem;
+}
+.folder-link:hover,
+.folder-link.on {
+  border-color: var(--hub-clear);
+  box-shadow: inset 3px 0 0 var(--hub-clear);
+}
+.folder-link.empty { opacity: 0.55; }
+.folder-link:disabled { cursor: default; opacity: 0.45; }
+.folder-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+.select-visible {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  color: var(--text-2);
+  cursor: pointer;
+  user-select: none;
+}
+.select-visible input {
+  appearance: none;
+  width: 0.92rem;
+  height: 0.92rem;
+  border: 1.5px solid var(--line-strong);
+  background: var(--paper);
+  cursor: pointer;
+  position: relative;
+}
+.select-visible input:checked,
+.select-visible input:indeterminate {
+  background: #14180c;
+  border-color: #14180c;
+}
+.select-visible input:checked::after,
+.select-visible input:indeterminate::after {
+  content: "";
+  position: absolute;
+  left: 0.18rem;
+  top: 0.05rem;
+  width: 0.32rem;
+  height: 0.5rem;
+  border: solid #efe7d4;
+  border-width: 0 1.6px 1.6px 0;
+  transform: rotate(45deg);
+}
+.select-visible input:indeterminate::after {
+  top: 0.32rem;
+  left: 0.14rem;
+  width: 0.5rem;
+  height: 0;
+  border-width: 0 0 1.6px 0;
+  transform: none;
+}
+.folder-hint {
+  font-size: 0.78rem;
+  color: var(--text-3);
+}
+.bulk-bar {
+  position: sticky;
+  bottom: 0.85rem;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.72rem 0.95rem;
+  background: #12140f;
+  color: var(--paper);
+  border: 1px solid rgba(197, 212, 106, 0.46);
+  box-shadow:
+    inset 0 1px 0 rgba(239, 231, 212, 0.1),
+    0 16px 36px rgba(0, 0, 0, 0.38);
+}
+.bulk-bar[hidden] { display: none !important; }
+.bulk-bar .bulk-count {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.1em;
+  color: var(--hub-clear);
+}
+.bulk-bar .btn-primary {
+  --btn-bg: var(--hub-clear);
+  --btn-fg: #14180c;
+  --btn-line: var(--hub-clear);
+}
 .docket-find {
   display: flex;
   align-items: center;
@@ -937,7 +1059,7 @@ select.ctl, input.ctl {
   display: grid;
   grid-template-rows: auto 1fr auto;
   gap: 0.7rem;
-  padding: 1.15rem 1.15rem 1rem 1.25rem;
+  padding: 1.15rem 1.15rem 1rem 2.45rem;
   border: 0;
   border-radius: 0;
   color: var(--ink-on-paper);
@@ -945,7 +1067,7 @@ select.ctl, input.ctl {
   cursor: pointer;
   text-align: left;
   overflow: hidden;
-  transition: border-color 0.2s ease, filter 0.2s ease;
+  transition: border-color 0.2s ease, filter 0.2s ease, opacity 0.2s ease;
   box-shadow: none;
   transform-style: preserve-3d;
 }
@@ -974,6 +1096,7 @@ select.ctl, input.ctl {
 .mail-card.lit::after { opacity: 1; }
 .mail-card:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
 .mail-card .row { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
+.mail-card .row-end { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
 .verdict-tag {
   display: inline-flex;
   align-items: baseline;
@@ -1022,9 +1145,70 @@ select.ctl, input.ctl {
 .field-strip i.none { background: rgba(28, 23, 16, 0.14); }
 .mail-card .foot { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
 .mail-card .foot .id { font-family: var(--font-mono); font-size: 0.7rem; color: rgba(28, 23, 16, 0.45); }
-.mail-card.pending { opacity: 0.78; }
+.mail-card.pending { opacity: 0.78; padding-left: 1.25rem; }
 .mail-card.pending .verdict-tag { background: rgba(28, 23, 16, 0.12); }
 .mail-card.compact { padding: 0.85rem 1rem 0.85rem 1.15rem; gap: 0.45rem; }
+.card-check {
+  position: absolute;
+  top: 0.82rem;
+  left: 0.62rem;
+  z-index: 3;
+  width: 1.4rem;
+  height: 1.4rem;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.card-check input {
+  appearance: none;
+  width: 0.95rem;
+  height: 0.95rem;
+  margin: 0;
+  border: 1.5px solid rgba(28, 23, 16, 0.38);
+  background: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  position: relative;
+}
+.card-check input:hover { border-color: rgba(28, 23, 16, 0.7); }
+.card-check input:checked {
+  background: #14180c;
+  border-color: #14180c;
+}
+.card-check input:checked::after {
+  content: "";
+  position: absolute;
+  left: 0.2rem;
+  top: 0.04rem;
+  width: 0.32rem;
+  height: 0.52rem;
+  border: solid #efe7d4;
+  border-width: 0 1.6px 1.6px 0;
+  transform: rotate(45deg);
+}
+.card-check input:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+.mail-card.picked {
+  box-shadow: inset 0 0 0 1.5px rgba(20, 24, 12, 0.35);
+}
+.mail-card.filed {
+  opacity: 0.58;
+  filter: grayscale(0.22);
+}
+.mail-card.filed:hover { opacity: 0.78; filter: grayscale(0.08); }
+.filed-mark {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(28, 23, 16, 0.55);
+  border: 1px solid rgba(28, 23, 16, 0.18);
+  padding: 0.18rem 0.4rem 0.12rem;
+  background: rgba(255, 255, 255, 0.45);
+}
 
 /* skeleton */
 .skel {
@@ -2182,6 +2366,8 @@ input[type="range"].dial::-moz-range-thumb {
 @media (max-width: 980px) {
   .shell { padding: 0.75rem 0.9rem 3rem; }
   .docket-head { flex-wrap: wrap; }
+  .docket-actions { width: 100%; justify-content: space-between; }
+  .folder-hint { display: none; }
   .docket-find { flex-wrap: wrap; }
   .top { grid-template-columns: 1fr auto; row-gap: 0.6rem; position: static; }
   .counters { grid-column: 1 / -1; }

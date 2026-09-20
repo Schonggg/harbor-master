@@ -78,6 +78,13 @@ export async function request(path, { method = "GET", body, timeout = 120000 } =
   }
 }
 
+export async function markReviewed(emailIds, reviewed = true) {
+  return request("/api/board/reviewed", {
+    method: "POST",
+    body: { email_ids: emailIds, reviewed },
+  });
+}
+
 export async function discoverApiBase() {
   const order = [];
   order.push("");

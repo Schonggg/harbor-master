@@ -1,11 +1,11 @@
 // ① Verdict board — Worldwide Hubs: three offices, then the docket.
-import { store as bridgeStore } from "../lib/store.js?v=58";
-import { esc, $, $$, on, shortId } from "../lib/dom.js?v=58";
+import { store as bridgeStore } from "../lib/store.js?v=59";
+import { esc, $, $$, on, shortId } from "../lib/dom.js?v=59";
 import { enter, countTo, magnetize, tiltify, scrollToY } from "../lib/motion.js";
 import { scoutZh, VERDICT, fieldZh } from "../lib/copy.js";
-import { card, orderedFields, summarize, courtFields } from "../lib/case.js?v=58";
-import { highlightText, matchesRun, rankRun } from "../lib/docket-search.js?v=58";
-import { SEVEN_FIELDS, effectiveState } from "../lib/field-display.js?v=58";
+import { card, orderedFields, summarize, courtFields } from "../lib/case.js?v=59";
+import { highlightText, matchesRun, rankRun } from "../lib/docket-search.js?v=59";
+import { SEVEN_FIELDS, effectiveState } from "../lib/field-display.js?v=59";
 
 const HUBS = [
   {
@@ -77,7 +77,8 @@ const ART = {
 
 export function mount(root, ctx) {
   const store = ctx.store || bridgeStore;
-  const state = { verdict: "ALL", label: "ALL", query: "" };
+  const state = { verdict: "ALL", label: "ALL", query: "", showFiled: false };
+  const selected = new Set();
   try { state.query = sessionStorage.getItem("hm.docket.q") || ""; } catch { /* private mode */ }
 
   root.innerHTML = `
@@ -113,7 +114,13 @@ export function mount(root, ctx) {
             <h2>Docket</h2>
             <p id="docket-copy">One card per email. Open any card to see SI versus BL on the seven fields.</p>
           </div>
-          <button type="button" class="btn" id="board-refresh">Refresh</button>
+          <div class="docket-actions">
+            <button type="button" class="folder-link" id="folder-toggle" aria-pressed="false">
+              已审阅 <b id="folder-n">0</b>
+              <span class="folder-action" id="folder-action">查看</span>
+            </button>
+            <button type="button" class="btn" id="board-refresh">Refresh</button>
+          </div>
         </div>
         <form class="docket-find" id="docket-find" role="search">
           <span class="find-kicker" aria-hidden="true">Find</span>
@@ -123,8 +130,19 @@ export function mount(root, ctx) {
           <span class="find-meta" id="docket-hits" aria-live="polite"></span>
           <button type="button" class="find-clear" id="docket-clear" hidden aria-label="Clear search">Clear</button>
         </form>
+        <div class="folder-tools" id="folder-tools">
+          <label class="select-visible">
+            <input type="checkbox" id="select-visible" />
+            <span>全选当前可见</span>
+          </label>
+          <span class="folder-hint">Filed cards leave the open docket. Ledger still teaches pairs on the next run.</span>
+        </div>
         <div class="filter-row" id="filters"></div>
         <div id="cards"></div>
+        <div class="bulk-bar" id="bulk-bar" hidden>
+          <span class="bulk-count" id="bulk-count">已选 0 项</span>
+          <button type="button" class="btn btn-primary" id="bulk-file">标记为已审阅</button>
+        </div>
       </div>
     </section>`;
 
@@ -200,6 +218,7 @@ export function mount(root, ctx) {
   on(filtersEl, "click", "button[data-label]", (_, b) => { state.label = b.dataset.label; renderFilters(); renderCards(true); });
   on(cardsEl, "click", ".mail-card", (e, el) => {
     if (e.target.closest("[data-court]")) return;
+    if (e.target.closest(".card-check")) return;
     if (!el.dataset.run) return;
     ctx.openDetail(el.dataset.run);
   });
@@ -208,10 +227,115 @@ export function mount(root, ctx) {
     ctx.navigate("court", { run: el.dataset.court });
   });
   on(cardsEl, "click", "[data-clear-find]", () => { applyQuery(""); qEl?.focus(); });
+  on(cardsEl, "click", "[data-show-filed]", () => setShowFiled(true));
   on(cardsEl, "click", "[data-seed]", () => ctx.seed());
-  on(cardsEl, "keydown", ".mail-card", (e, el) => {
-    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ctx.openDetail(el.dataset.run); }
+  on(cardsEl, "click", ".card-check", (e) => { e.stopPropagation(); });
+  on(cardsEl, "change", "input[data-pick]", (e, input) => {
+    const id = input.dataset.pick;
+    if (!id) return;
+    if (input.checked) selected.add(id);
+    else selected.delete(id);
+    input.closest(".mail-card")?.classList.toggle("picked", input.checked);
+    syncBulk();
   });
+  on(cardsEl, "keydown", ".mail-card", (e, el) => {
+    if (e.target.closest(".card-check")) return;
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (el.dataset.run) ctx.openDetail(el.dataset.run); }
+  });
+
+  const folderToggle = $("#folder-toggle", root);
+  const selectVisible = $("#select-visible", root);
+  const bulkBar = $("#bulk-bar", root);
+  const bulkCount = $("#bulk-count", root);
+  const bulkFile = $("#bulk-file", root);
+
+  folderToggle?.addEventListener("click", () => setShowFiled(!state.showFiled));
+  selectVisible?.addEventListener("change", () => {
+    const ids = pickableIds();
+    if (selectVisible.checked) ids.forEach((id) => selected.add(id));
+    else ids.forEach((id) => selected.delete(id));
+    $$("input[data-pick]", cardsEl).forEach((input) => {
+      input.checked = selected.has(input.dataset.pick);
+      input.closest(".mail-card")?.classList.toggle("picked", input.checked);
+    });
+    syncBulk();
+  });
+  bulkFile?.addEventListener("click", async () => {
+    const ids = [...selected];
+    if (!ids.length || bulkFile.disabled) return;
+    const next = !ids.every((id) => isEmailFiled(id));
+    bulkFile.disabled = true;
+    try {
+      await store.markReviewed(ids, next);
+      selected.clear();
+      ctx.toast(next ? `Filed ${ids.length}` : `Returned ${ids.length} to the docket`, "ok");
+      renderCards(false);
+      syncBulk();
+      renderFolder();
+    } catch (err) {
+      ctx.toast(err.message || "Could not update the folder", "err");
+    } finally {
+      bulkFile.disabled = false;
+    }
+  });
+
+  function isEmailFiled(emailId) {
+    const r = store.s.runs.find((x) => x.email_id === emailId);
+    return Boolean(r && (r.reviewed === true || card(r).reviewed === true));
+  }
+
+  function isRunFiled(r) {
+    if (r?.pending) return false;
+    return r.reviewed === true || card(r).reviewed === true;
+  }
+
+  function filedCount() {
+    return store.s.runs.filter(isRunFiled).length;
+  }
+
+  function pickableIds() {
+    return filtered().filter((r) => !r.pending && r.email_id).map((r) => r.email_id);
+  }
+
+  function setShowFiled(on) {
+    state.showFiled = Boolean(on);
+    folderToggle?.setAttribute("aria-pressed", state.showFiled ? "true" : "false");
+    folderToggle?.classList.toggle("on", state.showFiled);
+    const action = $("#folder-action", root);
+    if (action) action.textContent = state.showFiled ? "收起" : "查看";
+    renderCards(true);
+    syncBulk();
+  }
+
+  function syncBulk() {
+    const ids = [...selected];
+    const n = ids.length;
+    if (bulkBar) bulkBar.hidden = n === 0;
+    if (bulkCount) bulkCount.textContent = `已选 ${n} 项`;
+    if (bulkFile) {
+      const allFiled = n > 0 && ids.every((id) => isEmailFiled(id));
+      bulkFile.textContent = allFiled ? "取消已审阅" : "标记为已审阅";
+    }
+    const visible = pickableIds();
+    if (selectVisible) {
+      const hit = visible.filter((id) => selected.has(id)).length;
+      selectVisible.checked = visible.length > 0 && hit === visible.length;
+      selectVisible.indeterminate = hit > 0 && hit < visible.length;
+    }
+    renderFolder();
+  }
+
+  function renderFolder() {
+    const nEl = $("#folder-n", root);
+    const n = filedCount();
+    if (nEl) nEl.textContent = String(n);
+    if (folderToggle) {
+      folderToggle.classList.toggle("empty", n === 0);
+      folderToggle.disabled = n === 0 && !state.showFiled;
+    }
+    const action = $("#folder-action", root);
+    if (action) action.textContent = state.showFiled ? "收起" : "查看";
+  }
 
   function pendingItems() {
     const have = new Set((store.s.runs || []).map((r) => r.email_id));
@@ -222,6 +346,7 @@ export function mount(root, ctx) {
     const q = state.query;
     const runs = store.s.runs.filter((r) => {
       const c = card(r);
+      if (!state.showFiled && isRunFiled(r)) return false;
       if (state.verdict !== "ALL" && (c.verdict || r.verdict) !== state.verdict) return false;
       if (state.label !== "ALL" && (c.scout?.label || "unknown") !== state.label) return false;
       if (!matchesRun(r, q)) return false;
@@ -279,6 +404,8 @@ export function mount(root, ctx) {
 
   function renderCards(animate = false) {
     const runs = filtered();
+    const have = new Set(store.s.runs.map((r) => r.email_id));
+    for (const id of [...selected]) if (!have.has(id)) selected.delete(id);
     if (!store.s.runs.length && !pendingItems().length) {
       const connecting = store.s.mode === "connecting";
       cardsEl.innerHTML = `
@@ -287,12 +414,21 @@ export function mount(root, ctx) {
           <p>${connecting ? "Connecting to the hosted 520-email inbox. Header and hubs stay at zero until the ledger answers — no replay fixtures." : "No mail on the board yet. Load inbox pulls the official SDOC corpus (520 emails)."}</p>
           ${connecting ? "" : `<button type="button" class="btn btn-primary" data-seed>Load inbox <span class="arrow">→</span></button>`}
         </div>`;
+      syncBulk();
       return;
     }
     if (!runs.length) {
       const q = state.query.trim();
+      const filed = filedCount();
+      if (!q && filed && !state.showFiled) {
+        cardsEl.innerHTML = `<div class="empty panel"><h3>Open docket is clear</h3><p>${filed} filed ${filed === 1 ? "card is" : "cards are"} in the folder. They stay filed across reload and a new AI pass.</p><button type="button" class="btn btn-primary" data-show-filed>查看已审阅</button></div>`;
+        renderHits(0);
+        syncBulk();
+        return;
+      }
       cardsEl.innerHTML = `<div class="empty panel"><h3>No matching cards</h3><p>${q ? `Nothing on this docket for "${esc(q)}". Try the email number (004) or a field value.` : "Try a different office, or clear the filter."}</p>${q ? `<button type="button" class="btn" data-clear-find>Clear search</button>` : ""}</div>`;
       renderHits(0);
+      syncBulk();
       return;
     }
     cardsEl.innerHTML = `<div class="card-grid">${runs.map((r) => {
@@ -315,11 +451,17 @@ export function mount(root, ctx) {
       const v = c.verdict || r.verdict;
       const label = c.scout?.label || "unknown";
       const charged = courtFields(r).length;
+      const eid = r.email_id || "";
+      const filed = isRunFiled(r);
+      const picked = selected.has(eid);
       return `
-        <article class="mail-card v-${v}" data-run="${esc(r.run_id)}" tabindex="0" role="button" aria-label="${esc(c.subject || r.email_id)}">
+        <article class="mail-card v-${v}${filed ? " filed" : ""}${picked ? " picked" : ""}" data-run="${esc(r.run_id)}" data-email="${esc(eid)}" tabindex="0" role="button" aria-label="${esc(c.subject || r.email_id)}">
+          <label class="card-check">
+            <input type="checkbox" data-pick="${esc(eid)}" ${picked ? "checked" : ""} aria-label="Select ${esc(eid)}" />
+          </label>
           <div class="row">
             <span class="verdict-tag">${v}<em>${VERDICT[v]?.zh || ""}</em></span>
-            <span class="chip">${esc(scoutZh(label))}${c.scout?.confidence != null ? ` · ${Math.round(c.scout.confidence * 100)}%` : ""}</span>
+            <span class="row-end">${filed ? `<span class="filed-mark">已审阅</span>` : ""}<span class="chip">${esc(scoutZh(label))}${c.scout?.confidence != null ? ` · ${Math.round(c.scout.confidence * 100)}%` : ""}</span></span>
           </div>
           <h3 title="${esc(c.subject || r.email_id)}">${state.query.trim() ? highlightText(c.subject || r.email_id, state.query) : esc(c.subject || r.email_id)}</h3>
           <p class="summary">${esc(summarize(r))}</p>
@@ -333,6 +475,7 @@ export function mount(root, ctx) {
     if (animate && runs.length < 48) enter($$(".mail-card", cardsEl), { stagger: 0.035, y: 16 });
     prefetchVisible();
     renderHits(runs.length);
+    syncBulk();
   }
 
   function renderHits(shown) {
@@ -374,7 +517,8 @@ export function mount(root, ctx) {
       if (jobFresh) {
         copy.textContent = `Loading official inbox onto the board · ${Math.max(job.processed || 0, official)} / ${job.total || inbox || 520}. Cards appear as each email is judged.`;
       } else if (official || inbox) {
-        copy.textContent = `Official SDOC inbox · ${official} judged${pending ? ` · ${pending} queued` : ""} · ${inbox || 520} files. Open a card to see SI versus BL.`;
+        const filed = filedCount();
+        copy.textContent = `Official SDOC inbox · ${official} judged${pending ? ` · ${pending} queued` : ""}${filed ? ` · ${filed} filed` : ""} · ${inbox || 520} files. Open a card to see SI versus BL.`;
       } else {
         copy.textContent = "One card per email. Open any card to see SI versus BL on the seven fields.";
       }
@@ -391,6 +535,7 @@ export function mount(root, ctx) {
     renderFilters();
     renderCards(reason !== "refresh" && reason !== "job");
     renderDocketCopy();
+    renderFolder();
   }
 
   update();

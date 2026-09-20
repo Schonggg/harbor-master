@@ -147,6 +147,7 @@ class LedgerStore:
             conn.execute("DELETE FROM email_verdicts")
             conn.execute("DELETE FROM pipeline_jobs")
             conn.execute("DELETE FROM stored_objects")
+            conn.execute("DELETE FROM reviewed_marks")
 
     def _init_schema(self) -> None:
         global _PG_SCHEMA_READY
@@ -157,6 +158,43 @@ class LedgerStore:
             conn.executescript(schema)
         if self.dsn:
             _PG_SCHEMA_READY = True
+
+    def mark_reviewed(self, email_ids: list[str], reviewed_by: str = "") -> None:
+        """Batch-file emails as human-reviewed. Re-marking the same id refreshes the stamp."""
+        now = datetime.now(timezone.utc).isoformat()
+        who = str(reviewed_by or "")
+        with self._connect() as conn:
+            for eid in email_ids:
+                token = str(eid or "").strip()
+                if not token:
+                    continue
+                self._upsert(
+                    conn,
+                    "reviewed_marks",
+                    "email_id",
+                    ["email_id", "reviewed_by", "reviewed_at"],
+                    (token, who, now),
+                )
+
+    def unmark_reviewed(self, email_ids: list[str]) -> None:
+        """Undo a filed mark so the card returns to the open docket."""
+        with self._connect() as conn:
+            for eid in email_ids:
+                token = str(eid or "").strip()
+                if not token:
+                    continue
+                conn.execute("DELETE FROM reviewed_marks WHERE email_id = ?", (token,))
+
+    def list_reviewed_email_ids(self) -> set[str]:
+        """email_ids currently in the filed folder. Survives re-runs; not part of CaseCard."""
+        with self._connect() as conn:
+            rows = conn.execute("SELECT email_id FROM reviewed_marks").fetchall()
+        out: set[str] = set()
+        for row in rows:
+            eid = str(_as_dict(row).get("email_id") or "").strip()
+            if eid:
+                out.add(eid)
+        return out
 
     def add_rule(self, rule: LedgerRule) -> None:
         with self._connect() as conn:

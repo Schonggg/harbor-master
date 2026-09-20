@@ -5,13 +5,23 @@
 //   offline — replays captured payloads from demo-data.js and simulates the
 //             ledger/replay loop client-side so the demo still tells its story
 //             on a static HTTPS host.
-import { request, API_BASE, ApiError, discoverApiBase, EMAIL_GET_TIMEOUT_MS } from "./api.js?v=25";
+import { request, API_BASE, ApiError, discoverApiBase, EMAIL_GET_TIMEOUT_MS, markReviewed as postReviewed } from "./api.js?v=59";
 import { DEMO_RUNS, DEMO_EMAILS, DEMO_CHAOS, DEMO_AUTONOMY } from "./demo-data.js";
 
 const clone = (v) => (typeof structuredClone === "function" ? structuredClone(v) : JSON.parse(JSON.stringify(v)));
 const isDemoId = (id) => String(id || "").startsWith("demo_");
 function dropDemoRuns(runs) {
   return (runs || []).filter((r) => !isDemoId(r.email_id));
+}
+function applyOfflineFiled(runs) {
+  let filed = new Set();
+  try { filed = new Set(JSON.parse(localStorage.getItem("hm.reviewedIds") || "[]")); } catch { /* private mode */ }
+  if (!filed.size) return runs;
+  return (runs || []).map((r) => {
+    if (!filed.has(r.email_id)) return r;
+    const nextCard = { ...(r.payload?.card || {}), reviewed: true };
+    return { ...r, reviewed: true, payload: { ...r.payload, card: nextCard } };
+  });
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 function isHostedOrigin() {
@@ -233,7 +243,7 @@ class Store extends EventTarget {
     this.set({
       mode: "offline",
       lastError: err instanceof ApiError ? err.message : String(err?.message || err || ""),
-      runs: clone(DEMO_RUNS).map((r) => decorateRun(r, DEMO_EMAILS)),
+      runs: applyOfflineFiled(clone(DEMO_RUNS).map((r) => decorateRun(r, DEMO_EMAILS))),
       emails: clone(DEMO_EMAILS),
       ledger: [],
       autonomy: clone(DEMO_AUTONOMY),
@@ -251,11 +261,15 @@ class Store extends EventTarget {
     try {
       const row = await request(`/api/runs/${encodeURIComponent(runId)}`, { timeout: 20000 });
       if (!row?.payload) return;
-      const runs = this.state.runs.map((r) => (
-        r.run_id === runId || r.case_id === runId
-          ? decorateRun({ ...r, ...row, payload: row.payload }, this.state.emails)
-          : r
-      ));
+      const runs = this.state.runs.map((r) => {
+        if (r.run_id !== runId && r.case_id !== runId) return r;
+        const filed = Boolean(
+          r.reviewed || r.payload?.card?.reviewed || row.reviewed || row.payload?.card?.reviewed
+        );
+        const payload = { ...(row.payload || r.payload || {}) };
+        payload.card = { ...(payload.card || {}), reviewed: filed };
+        return decorateRun({ ...r, ...row, reviewed: filed, payload }, this.state.emails);
+      });
       this.set({ runs }, "hydrate");
     } catch {
       /* compact board payload is enough for the docket */
@@ -362,7 +376,7 @@ class Store extends EventTarget {
     }
     if (!this.live) {
       this._offline = { ledger: [], reviews: [] };
-      this.set({ runs: clone(DEMO_RUNS).map((r) => decorateRun(r, DEMO_EMAILS)), ledger: [], lastChaos: null }, "seed");
+      this.set({ runs: applyOfflineFiled(clone(DEMO_RUNS).map((r) => decorateRun(r, DEMO_EMAILS))), ledger: [], lastChaos: null }, "seed");
       this.recompute();
       return { seeded: this.state.runs.map((r) => ({ email_id: r.email_id, verdict: r.verdict })) };
     }
@@ -614,6 +628,30 @@ class Store extends EventTarget {
       if (out?.rule) rules.push(out.rule);
     }
     return rules;
+  }
+
+  async markReviewed(emailIds, reviewed = true) {
+    const ids = [...new Set((emailIds || []).map((id) => String(id || "").trim()).filter(Boolean))];
+    if (!ids.length) return { ok: true, count: 0, reviewed: Boolean(reviewed) };
+    const flag = Boolean(reviewed);
+    if (this.live) {
+      await postReviewed(ids, flag);
+    } else {
+      try {
+        const cur = new Set(JSON.parse(localStorage.getItem("hm.reviewedIds") || "[]"));
+        ids.forEach((id) => (flag ? cur.add(id) : cur.delete(id)));
+        localStorage.setItem("hm.reviewedIds", JSON.stringify([...cur]));
+      } catch { /* private mode */ }
+    }
+    const hit = new Set(ids);
+    const runs = this.state.runs.map((run) => {
+      if (!hit.has(run.email_id)) return run;
+      const nextCard = { ...(run.payload?.card || {}), reviewed: flag };
+      return { ...run, reviewed: flag, payload: { ...run.payload, card: nextCard } };
+    });
+    this.set({ runs }, "reviewed");
+    this.recompute();
+    return { ok: true, count: ids.length, reviewed: flag };
   }
 
   async revoke(ruleId) {
