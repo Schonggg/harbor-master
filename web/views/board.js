@@ -1,11 +1,11 @@
 // ① Verdict board — Worldwide Hubs: three offices, then the docket.
-import { store as bridgeStore } from "../lib/store.js?v=61";
-import { esc, $, $$, on, shortId } from "../lib/dom.js?v=61";
+import { store as bridgeStore } from "../lib/store.js?v=62";
+import { esc, $, $$, on, shortId } from "../lib/dom.js?v=62";
 import { enter, countTo, magnetize, tiltify, scrollToY } from "../lib/motion.js?v=16";
 import { scoutZh, VERDICT, fieldZh } from "../lib/copy.js";
-import { card, orderedFields, summarize, courtFields } from "../lib/case.js?v=61";
-import { highlightText, matchesRun, rankRun } from "../lib/docket-search.js?v=61";
-import { SEVEN_FIELDS, effectiveState } from "../lib/field-display.js?v=61";
+import { card, orderedFields, summarize, courtFields } from "../lib/case.js?v=62";
+import { highlightText, matchesRun, rankRun } from "../lib/docket-search.js?v=62";
+import { SEVEN_FIELDS, effectiveState } from "../lib/field-display.js?v=62";
 
 const HUBS = [
   {
@@ -115,7 +115,7 @@ export function mount(root, ctx) {
             <p id="docket-copy">One card per email. Open any card to see SI versus BL on the seven fields.</p>
           </div>
           <div class="docket-actions">
-            <button type="button" class="folder-link" id="folder-toggle" aria-pressed="false">
+            <button type="button" class="folder-link is-zero" id="folder-toggle" aria-pressed="false">
               Filed <b id="folder-n">0</b>
               <span class="folder-action" id="folder-action">View</span>
             </button>
@@ -329,7 +329,7 @@ export function mount(root, ctx) {
     const n = filedCount();
     if (nEl) nEl.textContent = String(n);
     if (folderToggle) {
-      folderToggle.classList.toggle("empty", n === 0);
+      folderToggle.classList.toggle("is-zero", n === 0);
       folderToggle.disabled = n === 0 && !state.showFiled;
     }
     const action = $("#folder-action", root);

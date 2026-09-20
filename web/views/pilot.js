@@ -1,11 +1,11 @@
 // ③ Pilot deck — the human in the loop. One decision becomes a ledger rule, the
 // ledger replays history, and the queue visibly collapses.
-import { store as bridgeStore } from "../lib/store.js?v=61";
-import { esc, $, $$, on, shortId, diffChars, renderDiff, fmtUsd, sourceWaitHtml } from "../lib/dom.js?v=61";
+import { store as bridgeStore } from "../lib/store.js?v=62";
+import { esc, $, $$, on, shortId, diffChars, renderDiff, fmtUsd, sourceWaitHtml } from "../lib/dom.js?v=62";
 import { gsap, reduced, enter, countTo, collapseOut, pulse } from "../lib/motion.js";
 import { fieldZh, fieldEn, RISK, failureZh } from "../lib/copy.js";
-import { card, orderedFields, pilotReasons, ledgerRef, confidenceOf } from "../lib/case.js?v=61";
-import { effectiveState, present } from "../lib/field-display.js?v=61";
+import { card, orderedFields, pilotReasons, ledgerRef, confidenceOf } from "../lib/case.js?v=62";
+import { effectiveState, present } from "../lib/field-display.js?v=62";
 
 export function mount(root, ctx, params = {}) {
   const store = ctx.store || bridgeStore;
