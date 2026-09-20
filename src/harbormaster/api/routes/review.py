@@ -35,6 +35,52 @@ def _find_run(case_id: str) -> dict | None:
     return LedgerStore().get_run_by_ref(case_id)
 
 
+def _lockable_pairs(card: dict) -> list[tuple[str, str, str]]:
+    """SI/BL writings a human stamp can teach the ledger. No pair → nothing to replay."""
+    out: list[tuple[str, str, str]] = []
+    for fv in card.get("field_verdicts") or []:
+        if not isinstance(fv, dict):
+            continue
+        if fv.get("state") not in {"UNCERTAIN", "MISMATCH"}:
+            continue
+        if str(fv.get("rationale") or "").startswith("ledger"):
+            continue
+        charge = fv.get("charge") or {}
+        left = str((charge.get("left") or {}).get("raw_value") or fv.get("left_value") or "").strip()
+        right = str((charge.get("right") or {}).get("raw_value") or fv.get("right_value") or "").strip()
+        field = str(fv.get("field") or "").strip()
+        if field and left and right:
+            out.append((field, left, right))
+    return out
+
+
+def _promote_pairs_for_verdict(store: LedgerStore, case_id: str, card: dict, body: CaseVerdictBody) -> tuple[list[dict], int]:
+    """Closing CLEAR/HOLD teaches remaining contested pairs so later mail can reuse the ruling."""
+    decision = (
+        PilotDecision.ACCEPT_AS_MATCH if body.verdict == "CLEAR" else PilotDecision.CONFIRM_MISMATCH
+    )
+    promoter = Promoter(store)
+    replayed = 0
+    rules: list[dict] = []
+    for field, left, right in _lockable_pairs(card):
+        if store.find_matching_rule(field, left, right):
+            continue
+        review = PilotReview(
+            case_id=case_id,
+            field=field,
+            decision=decision,
+            promote_to_ledger=True,
+            reviewer=body.reviewer,
+            note=body.note or f"case {body.verdict}",
+        )
+        rule = promoter.promote(review, left, right)
+        if not rule:
+            continue
+        replayed += int((Replayer(store).replay(rule.rule_id) or {}).get("updated") or 0)
+        rules.append(rule.model_dump(mode="json"))
+    return rules, replayed
+
+
 @router.get("/review/queue")
 def review_queue():
     runs = LedgerStore().list_runs()
@@ -60,13 +106,17 @@ def decide(body: ReviewBody):
 
 @router.post("/review/verdict")
 def set_case_verdict(body: CaseVerdictBody):
-    """Human closes a whole PILOT mail as CLEAR or HOLD. No LLM. No field pair required."""
+    """Human closes a whole PILOT mail as CLEAR or HOLD. Contested SI/BL pairs are taught to the ledger."""
     run = _find_run(body.case_id)
     if not run:
         raise HTTPException(status_code=404, detail="case not found")
     store = LedgerStore()
     payload = dict(run.get("payload") or {})
     card = dict(payload.get("card") or {})
+    rules, replayed = _promote_pairs_for_verdict(store, run.get("case_id") or body.case_id, card, body)
+    fresh = _find_run(body.case_id) or run
+    payload = dict(fresh.get("payload") or payload)
+    card = dict(payload.get("card") or card)
     card["verdict"] = body.verdict
     card["pilot_override"] = True
     card["pilot_override_by"] = body.reviewer
@@ -84,17 +134,19 @@ def set_case_verdict(body: CaseVerdictBody):
             pass
     from harbormaster.report.reply_draft import generate_outbox_from_run
 
-    draft = generate_outbox_from_run({**run, "payload": payload}, body.verdict)
+    draft = generate_outbox_from_run({**fresh, "payload": payload}, body.verdict)
     if draft:
         card["reply_draft"] = draft
         payload["card"] = card
-    store.save_run(run["run_id"], run["case_id"], run["email_id"], body.verdict, payload)
+    store.save_run(fresh["run_id"], fresh["case_id"], fresh["email_id"], body.verdict, payload)
     return {
-        "case_id": run["case_id"],
-        "email_id": run["email_id"],
+        "case_id": fresh["case_id"],
+        "email_id": fresh["email_id"],
         "verdict": body.verdict,
         "reviewer": body.reviewer,
         "reply_draft": draft,
+        "rules": rules,
+        "replay": {"updated": replayed},
     }
 
 

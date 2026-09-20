@@ -1,11 +1,11 @@
 // ⑤ Chaos — four red buttons. The point is not that the system survives; it is
 // that it raises its hand honestly: detect → flag → hand to pilot, with a
 // DEGRADED tag whenever the LLM was cut.
-import { store as bridgeStore } from "../lib/store.js?v=56";
-import { esc, $, $$, on, shortId, sleep } from "../lib/dom.js?v=56";
+import { store as bridgeStore } from "../lib/store.js?v=57";
+import { esc, $, $$, on, shortId, sleep } from "../lib/dom.js?v=57";
 import { gsap, reduced, enter, shake, pulse, tiltify } from "../lib/motion.js";
 import { CHAOS, failureZh, VERDICT, scoutZh } from "../lib/copy.js";
-import { pilotReasons } from "../lib/case.js?v=56";
+import { pilotReasons } from "../lib/case.js?v=57";
 
 export function mount(root, ctx) {
   const store = ctx.store || bridgeStore;

@@ -1,10 +1,10 @@
 // ④ Ledger — every rule a pilot ever taught the system, with provenance and revoke.
-import { store as bridgeStore } from "../lib/store.js?v=56";
-import { esc, $, $$, on, shortId, fmtTime } from "../lib/dom.js?v=56";
+import { store as bridgeStore } from "../lib/store.js?v=57";
+import { esc, $, $$, on, shortId, fmtTime } from "../lib/dom.js?v=57";
 import { enter } from "../lib/motion.js";
 import { fieldZh } from "../lib/copy.js";
-import { card, orderedFields, ledgerRef } from "../lib/case.js?v=56";
-import { present, effectiveState } from "../lib/field-display.js?v=56";
+import { card, orderedFields, ledgerRef } from "../lib/case.js?v=57";
+import { present, effectiveState } from "../lib/field-display.js?v=57";
 
 export function mount(root, ctx) {
   const store = ctx.store || bridgeStore;
@@ -13,7 +13,7 @@ export function mount(root, ctx) {
       <div class="view-head">
         <div>
           <h1>Ledger <small>LEDGER</small></h1>
-          <p>Pilot is the human desk — one case, one stamp. Ledger is the memory: a promoted pair becomes a reusable rule, replays older mail, and can be revoked. It does not store HOLD cards; it stores the pair a pilot taught the court.</p>
+          <p>Pilot is the human desk. Closing a mail as CLEAR or HOLD, or locking a single field, writes the SI/BL pair here. Later mail with the same writings reuses that ruling. Smash/empty cases have no pair, so they leave Pilot without a rule. Revoke stops new mail from using a rule.</p>
         </div>
         <div class="view-actions"><span class="chip signal" id="rule-count"></span></div>
       </div>
@@ -42,7 +42,7 @@ export function mount(root, ctx) {
     const active = rules.filter((r) => r.active).length;
     $("#rule-count", root).textContent = `${active} active · ${rules.length - active} revoked`;
     if (!rules.length) {
-      rulesEl.innerHTML = `<div class="empty panel"><h3>The ledger is blank</h3><p>Stamp a PILOT case on the Pilot deck and promote the pair. That rule lands here and can replay older mail. Until then there is nothing to show — this is not a HOLD archive.</p><button type="button" class="btn btn-pilot" data-pilot>Go to Pilot <span class="arrow">→</span></button></div>`;
+      rulesEl.innerHTML = `<div class="empty panel"><h3>The ledger is blank</h3><p>Close a PILOT mail as CLEAR or HOLD, or lock a single field on the Pilot deck. That SI/BL pair lands here and can replay older mail. Until then there is nothing to show — smash/empty cases cannot teach a pair.</p><button type="button" class="btn btn-pilot" data-pilot>Go to Pilot <span class="arrow">→</span></button></div>`;
       return;
     }
     rulesEl.innerHTML = `<div class="rule-list">${rules.map((r) => {

@@ -492,29 +492,37 @@ class Store extends EventTarget {
       };
       return { ...run, verdict, payload: { ...run.payload, card } };
     });
+    const taught = this.live ? [] : this._offlinePromoteOnVerdict(caseId, verdict, note);
     this.set({ runs: patchRuns(this.state.runs) }, "decide");
     this.recompute();
     const afterSet = new Set(this.pilotQueue().map((r) => r.run_id));
     const released = before.filter((id) => !afterSet.has(id));
-    const result = { verdict, released, queue_before: before.length, queue_after: afterSet.size };
+    const result = { verdict, released, queue_before: before.length, queue_after: afterSet.size, rules: taught, replay: { updated: 0 } };
     if (this.live) {
       this._pendingVerdicts.set(caseId, { verdict, note, draft: null });
-      request("/api/review/verdict", {
-        method: "POST",
-        timeout: 20000,
-        body: { case_id: caseId, verdict, reviewer: "pilot", note },
-      }).then((out) => {
+      try {
+        const out = await request("/api/review/verdict", {
+          method: "POST",
+          timeout: 20000,
+          body: { case_id: caseId, verdict, reviewer: "pilot", note },
+        });
         if (out?.reply_draft) {
           this._pendingVerdicts.set(caseId, { verdict, note, draft: out.reply_draft });
           this.set({ runs: patchRuns(this.state.runs, out.reply_draft) }, "decide");
         }
         this._pendingVerdicts.delete(caseId);
-        this.refresh().catch(() => {});
-      }).catch(async (err) => {
+        await this.refresh().catch(() => {});
+        result.rules = out?.rules || [];
+        result.replay = out?.replay || { updated: 0 };
+        const after = new Set(this.pilotQueue().map((r) => r.run_id));
+        result.released = before.filter((id) => !after.has(id));
+        result.queue_after = after.size;
+      } catch (err) {
         this._pendingVerdicts.delete(caseId);
         await this.refresh().catch(() => {});
         this.emit("change", { reason: "verdict-error", message: err.message });
-      });
+        throw err;
+      }
     }
     return result;
   }
@@ -581,6 +589,24 @@ class Store extends EventTarget {
     this.set({ runs, ledger }, "decide");
     this.recompute();
     return { review, rule, replay: { updated, rule_id: rule.rule_id } };
+  }
+
+  _offlinePromoteOnVerdict(caseId, verdict, note = "") {
+    const run = this.state.runs.find((r) => r.case_id === caseId || r.run_id === caseId || r.email_id === caseId);
+    const fvs = run?.payload?.card?.field_verdicts || [];
+    const decision = verdict === "CLEAR" ? "accept_as_match" : "confirm_mismatch";
+    const rules = [];
+    for (const fv of fvs) {
+      const left = fv.charge?.left?.raw_value || fv.left_value || "";
+      const right = fv.charge?.right?.raw_value || fv.right_value || "";
+      if ((fv.state !== "UNCERTAIN" && fv.state !== "MISMATCH") || !String(left).trim() || !String(right).trim()) continue;
+      if (/^ledger/.test(fv.rationale || "")) continue;
+      const key = normalizedPairKey(left, right);
+      if (this.state.ledger.some((r) => r.active !== false && r.field === fv.field && r.normalized_key === key)) continue;
+      const out = this._offlineDecide({ caseId, field: fv.field, decision, left, right, note: note || `case ${verdict}` });
+      if (out?.rule) rules.push(out.rule);
+    }
+    return rules;
   }
 
   async revoke(ruleId) {

@@ -1,11 +1,11 @@
 // ③ Pilot deck — the human in the loop. One decision becomes a ledger rule, the
 // ledger replays history, and the queue visibly collapses.
-import { store as bridgeStore } from "../lib/store.js?v=56";
-import { esc, $, $$, on, shortId, diffChars, renderDiff, fmtUsd, sourceWaitHtml } from "../lib/dom.js?v=56";
+import { store as bridgeStore } from "../lib/store.js?v=57";
+import { esc, $, $$, on, shortId, diffChars, renderDiff, fmtUsd, sourceWaitHtml } from "../lib/dom.js?v=57";
 import { gsap, reduced, enter, countTo, collapseOut, pulse } from "../lib/motion.js";
 import { fieldZh, fieldEn, RISK, failureZh } from "../lib/copy.js";
-import { card, orderedFields, pilotReasons, ledgerRef, confidenceOf } from "../lib/case.js?v=56";
-import { effectiveState, present } from "../lib/field-display.js?v=56";
+import { card, orderedFields, pilotReasons, ledgerRef, confidenceOf } from "../lib/case.js?v=57";
+import { effectiveState, present } from "../lib/field-display.js?v=57";
 
 export function mount(root, ctx, params = {}) {
   const store = ctx.store || bridgeStore;
@@ -21,7 +21,7 @@ export function mount(root, ctx, params = {}) {
       <div class="view-head">
         <div>
           <h1>Pilot <small>PILOT DECK</small></h1>
-          <p>Read the mail. Release it as CLEAR or stop it as HOLD. A grey SI/BL pair can be locked into the Ledger so later mail reuses that ruling. Chaos / broken-pipeline cases sit in this same queue — filter them on the left.</p>
+          <p>Read the mail. Release it as CLEAR or stop it as HOLD. That stamp closes the case, and any remaining SI versus BL pair is locked into the Ledger so later mail with the same writings can be judged automatically. Chaos / broken mail has no pair to teach — it only leaves the queue.</p>
         </div>
         <div class="view-actions">
           <button type="button" class="btn" id="pilot-ledger">Ledger rules <span class="arrow">→</span></button>
@@ -309,8 +309,8 @@ export function mount(root, ctx, params = {}) {
       <div class="rule-stamp">
         <div class="seal">${clear ? "OK" : "HOLD"}</div>
         <div>
-          <div>You closed this mail as <b>${esc(s.verdict)}</b>. It left the Pilot queue${s.released.length ? `; queue <strong>${s.queueBefore}</strong> → <strong style="color:var(--clear)">${s.queueAfter}</strong>` : ""}.</div>
-          <div class="pilot-hint" style="margin-top:.5rem">Header counts move with it: Pilot down, ${clear ? "CLEAR" : "HOLD"} up. The model did not sit on the bench.</div>
+          <div>You closed this mail as <b>${esc(s.verdict)}</b>. It left the Pilot queue${s.released.length ? `; queue <strong>${s.queueBefore}</strong> → <strong style="color:var(--clear)">${s.queueAfter}</strong>` : ""}${s.rules?.length ? `. Locked <b>${s.rules.length}</b> SI/BL pair${s.rules.length === 1 ? "" : "s"} into the Ledger for later mail` : ""}.</div>
+          <div class="pilot-hint" style="margin-top:.5rem">${s.rules?.length ? "Later automatic rulings on the same writings will cite this rule. The model did not sit on the bench." : "This mail had no SI/BL pair to teach (smash, empty extract, or already matched). Header counts still move: Pilot down, " + (clear ? "CLEAR" : "HOLD") + " up."}</div>
         </div>
       </div>
       ${draft ? `<div class="section-title" style="margin-top:1.2rem"><h3>Outbox reply</h3><small>DRAFT · never auto-sent</small></div><pre class="pilot-mail">${esc(draft)}</pre>` : ""}
@@ -339,7 +339,7 @@ export function mount(root, ctx, params = {}) {
         <p class="rationale" style="margin-top:.7rem">${effectiveState(fv) === "UNCERTAIN"
           ? `Defence tried ${(fv.pleas || []).length} strategies and none held, but confidence is too low to hold. Treat as same or confirm the discrepancy — that pair is written to the Ledger.`
           : `The court already called this a mismatch. Confirm it (or treat as same) to lock the pair into the Ledger so later mail reuses the ruling.`}</p>
-        ${similar.length ? `<p class="pilot-hint">Locking this writes a Ledger rule and immediately replays <b style="color:var(--text)">${similar.length}</b> historical cases with the same writing.</p>` : `<p class="pilot-hint">Treat as same / Confirm discrepancy writes the first Ledger rule. CLEAR / HOLD above only closes this mail.</p>`}
+        ${similar.length ? `<p class="pilot-hint">Locking this writes a Ledger rule and immediately replays <b style="color:var(--text)">${similar.length}</b> historical cases with the same writing.</p>` : `<p class="pilot-hint">These two buttons lock only this field. CLEAR / HOLD below close the mail and lock every remaining SI/BL pair for later cases.</p>`}
       </div>
       <div class="decide-row">
         <button type="button" class="btn btn-lg btn-clear" data-decide="accept_as_match" ${deciding ? "disabled" : ""}>Lock in Ledger · same ✓</button>
@@ -407,6 +407,7 @@ export function mount(root, ctx, params = {}) {
         released: out.released,
         queueBefore: out.queue_before,
         queueAfter: out.queue_after,
+        rules: out.rules || [],
       };
       ctx.scene.setMood(verdict === "CLEAR" ? "clear" : "hold");
       const nodes = out.released.map((id) => $(`.queue-item[data-run="${id}"]`, queueEl)).filter(Boolean);
@@ -415,7 +416,9 @@ export function mount(root, ctx, params = {}) {
       renderQueue();
       pulse($("#qn", root), 1.25);
       renderMain(true);
-      ctx.toast(`Mail → ${verdict}. Queue ${out.queue_before} → ${out.queue_after}`, "ok", 5000);
+      ctx.toast(out.rules?.length
+        ? `Mail → ${verdict}. Locked ${out.rules.length} pair${out.rules.length === 1 ? "" : "s"} to Ledger`
+        : `Mail → ${verdict}. Queue ${out.queue_before} → ${out.queue_after}`, "ok", 5000);
     } catch (e) {
       ctx.toast(`Ruling failed: ${e.message}`, "err");
       renderMain();
