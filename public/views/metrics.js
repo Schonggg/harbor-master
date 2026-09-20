@@ -1,10 +1,11 @@
 // ⑥ Metrics + autonomy dial — false alarms as the hero number, confusion matrix,
 // field-level agreement, and a live what-if dial over the match-confidence floor.
-import { store as bridgeStore } from "../lib/store.js?v=54";
+import { store as bridgeStore } from "../lib/store.js?v=55";
 import { esc, $, $$, on } from "../lib/dom.js";
 import { enter, countTo } from "../lib/motion.js";
 import { fieldZh, fieldEn, PRESETS } from "../lib/copy.js";
-import { SEVEN_FIELDS } from "../lib/field-display.js?v=54";
+import { sevenFields } from "../lib/case.js?v=55";
+import { SEVEN_FIELDS, effectiveState } from "../lib/field-display.js?v=55";
 
 export function mount(root, ctx) {
   const store = ctx.store || bridgeStore;
@@ -29,7 +30,7 @@ export function mount(root, ctx) {
         <div class="panel panel-pad">
           <div class="section-title"><h3>Field-level agreement</h3><small>WHAT THE COURT DID ON THIS BOARD</small></div>
           <div class="fbars" id="fbars"></div>
-          <div class="legend"><span class="s-MATCH"><i></i>MATCH</span><span class="s-MISMATCH"><i></i>MISMATCH</span><span class="s-UNCERTAIN"><i></i>UNCERTAIN</span></div>
+          <div class="legend"><span class="s-MATCH"><i></i>Match</span><span class="s-MISMATCH"><i></i>Mismatch</span><span class="s-UNCERTAIN"><i></i>Review</span></div>
         </div>
       </div>
       <div class="panel panel-pad">
@@ -301,13 +302,26 @@ export function mount(root, ctx) {
   }
 
   function renderFields() {
-    const m = store.s.metrics;
     const el = $("#fbars", root);
-    const fs = m?.field_stats || {};
-    const names = SEVEN_FIELDS.filter((f) => fs[f] || (f === "gross_weight_kg" && fs.gross_weight));
-    if (!names.length) { el.innerHTML = `<div class="empty"><p>No field data yet.</p></div>`; return; }
+    const fs = {};
+    for (const name of SEVEN_FIELDS) fs[name] = { MATCH: 0, MISMATCH: 0, UNCERTAIN: 0 };
+    let any = false;
+    for (const r of store.s.runs || []) {
+      for (const fv of sevenFields(r)) {
+        const key = fv.field === "gross_weight" ? "gross_weight_kg" : fv.field;
+        if (!fs[key]) continue;
+        any = true;
+        const st = effectiveState(fv);
+        fs[key][st] = (fs[key][st] || 0) + 1;
+      }
+    }
+    const names = SEVEN_FIELDS.filter((f) => {
+      const s = fs[f];
+      return (s.MATCH || 0) + (s.MISMATCH || 0) + (s.UNCERTAIN || 0) > 0;
+    });
+    if (!any || !names.length) { el.innerHTML = `<div class="empty"><p>No field data yet.</p></div>`; return; }
     el.innerHTML = names.map((f) => {
-      const s = fs[f] || fs.gross_weight || {};
+      const s = fs[f];
       const total = (s.MATCH || 0) + (s.MISMATCH || 0) + (s.UNCERTAIN || 0) || 1;
       const pct = (n) => `${((n || 0) / total) * 100}%`;
       return `<div class="fbar">

@@ -1,11 +1,11 @@
 // Case drawer: verdict hero, seven-field comparison, evidence with in-place
 // highlighting of the original message, and hand-offs to court / pilot.
-import { store as bridgeStore } from "../lib/store.js?v=54";
+import { store as bridgeStore } from "../lib/store.js?v=55";
 import { esc, $, $$, on, shortId, fmtUsd, diffChars, renderDiff, reEscape, sourceWaitHtml } from "../lib/dom.js";
 import { enter } from "../lib/motion.js";
 import { fieldZh, fieldEn, scoutZh, VERDICT, STATE, RISK, strategyZh, failureZh } from "../lib/copy.js";
-import { card, sevenFields, extraFields, orderedFields, ledgerRef, confidenceOf, pilotReasons } from "../lib/case.js?v=54";
-import { pairWritings, present, effectiveState, valueFromBody } from "../lib/field-display.js?v=54";
+import { card, sevenFields, extraFields, orderedFields, ledgerRef, confidenceOf, pilotReasons } from "../lib/case.js?v=55";
+import { pairView, present, effectiveState, valueFromBody } from "../lib/field-display.js?v=55";
 
 export function renderDetail(root, runId, ctx) {
   const store = ctx.store || bridgeStore;
@@ -20,9 +20,11 @@ export function renderDetail(root, runId, ctx) {
   const extras = extraFields(run);
   const charged = fields.filter((f) => f.charge && effectiveState(f) !== "MATCH");
   const reasons = v === "PILOT" ? pilotReasons(run) : [];
-  const disagree = fields.filter((f) => effectiveState(f) === "MISMATCH").length;
-  const grey = fields.filter((f) => effectiveState(f) === "UNCERTAIN").length;
+  const views = fields.map((fv) => ({ fv, view: pairView(fv) }));
+  const disagree = views.filter((x) => x.view.state === "MISMATCH").length;
+  const grey = views.filter((x) => x.view.state === "UNCERTAIN").length;
   const agree = fields.length - disagree - grey;
+  const extraDisagree = extras.filter((f) => effectiveState(f) === "MISMATCH").length;
 
   root.innerHTML = `
     <div class="drawer-inner v-${v}" data-run="${esc(run.run_id)}">
@@ -54,15 +56,17 @@ export function renderDetail(root, runId, ctx) {
           <small>${fields.length ? `${disagree ? `<b class="cmp-bad">${disagree} mismatch</b> · ` : ""}${agree} match${grey ? ` · ${grey} review` : ""}` : "SI · BL · STATE"}</small>
         </div>
         ${fields.length ? `
-        <p class="cmp-lead">${disagree ? "Mismatches are highlighted. Read SI versus BL on one row." : "These seven fields agree. SI and BL write the same fact."}</p>
+        ${disagree ? `<div class="cmp-hits">${views.filter((x) => x.view.state === "MISMATCH").map((x) => glanceHit(x.fv, x.view)).join("")}</div>` : ""}
+        <p class="cmp-lead">${cmpLead(v, disagree, extraDisagree)}</p>
         <div class="ftable">
-          <div class="frow head"><span>Field</span><span>Shipping instruction (SI)</span><span>Bill of lading (BL)</span><span>State</span><span></span></div>
-          ${fields.map((fv) => frow(fv, store)).join("")}
+          <div class="frow head"><span>Field</span><span>Shipping instruction (SI)</span><span>Bill of lading (BL)</span><span>Result</span><span></span></div>
+          ${views.map((x) => frow(x.fv, x.view, store)).join("")}
         </div>` : `<div class="empty"><p>This mail is not an SI/BL check, so there are no fields to compare. Scout labelled it “${esc(scoutZh(c.scout?.label))}” and filed it.</p></div>`}
         ${extras.length ? `
         <div class="section-title" style="margin-top:1.2rem"><h3>Also on the documents</h3><small>NOT IN THE SEVEN</small></div>
         <div class="ftable extra-ftable">
-          ${extras.map((fv) => frow(fv, store)).join("")}
+          <div class="frow head"><span>Field</span><span>Shipping instruction (SI)</span><span>Bill of lading (BL)</span><span>Result</span><span></span></div>
+          ${extras.map((fv) => frow(fv, pairView(fv), store)).join("")}
         </div>` : ""}
       </section>
 
@@ -138,19 +142,29 @@ export function renderDetail(root, runId, ctx) {
   });
 }
 
-function frow(fv, store) {
-  const pair = pairWritings(fv);
-  const state = effectiveState(fv, pair.si, pair.bl);
-  const L = present(fv.field, pair.si);
-  const R = present(fv.field, pair.bl);
+function cmpLead(verdict, disagree, extraDisagree) {
+  if (disagree) return "Mismatches sit at the top in purple. Read SI versus BL on one row.";
+  if (extraDisagree) return "The seven fields agree. A difference sits below — it is not one of the brief’s seven.";
+  if (verdict === "HOLD") return "The seven fields write the same fact after format (caps, locode, labels). The stored court pass still holds this mail.";
+  return "These seven fields agree. SI and BL write the same fact.";
+}
+
+function glanceHit(fv, view) {
+  const si = view.L.text || "—";
+  const bl = view.R.text || "—";
+  return `<div class="cmp-hit"><b>${esc(fieldZh(fv.field))}</b><span>${esc(si)}</span><i>vs</i><span>${esc(bl)}</span></div>`;
+}
+
+function frow(fv, view, store) {
+  const { L, R, state, si, bl } = view;
   const ref = ledgerRef(fv);
   const rule = ref ? store?.ruleById?.(ref.ruleId) : null;
-  const hasDetail = !!fv.charge;
-  const contested = hasDetail && state !== "MATCH";
+  const contested = state !== "MATCH" && !!fv.charge;
+  const hasDetail = contested;
   let leftHtml;
   let rightHtml;
-  if (state === "MISMATCH" && pair.si && pair.bl) {
-    const [dl, dr] = diffChars(L.text || pair.si, R.text || pair.bl);
+  if (state === "MISMATCH" && si && bl) {
+    const [dl, dr] = diffChars(L.text || si, R.text || bl);
     leftHtml = fvalHtml(L, dl);
     rightHtml = fvalHtml(R, dr);
   } else {
@@ -273,7 +287,8 @@ function paintSource(el, run, email) {
   const fields = orderedFields(run).filter((f) => f.charge);
   const terms = new Map();
   for (const f of fields) {
-    const cls = f.state === "MISMATCH" ? "" : f.state === "UNCERTAIN" ? "warn" : "si";
+    const st = effectiveState(f);
+    const cls = st === "MISMATCH" ? "" : st === "UNCERTAIN" ? "warn" : "si";
     for (const side of [f.charge.left, f.charge.right]) {
       const val = (side?.raw_value || "").trim();
       if (val.length >= 2) terms.set(val, cls);

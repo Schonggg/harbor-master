@@ -1,7 +1,7 @@
 // Case-level derived text: one-line summaries, pilot reasons, ledger references.
 import { FIELD_ORDER, fieldZh, strategyZh, failureZh } from "./copy.js";
 import { shortId } from "./dom.js";
-import { SEVEN_FIELDS, effectiveState, pairWritings, present } from "./field-display.js?v=54";
+import { SEVEN_FIELDS, effectiveState, pairWritings, present } from "./field-display.js?v=55";
 
 export function card(run) {
   return run?.payload?.card || {};
@@ -94,7 +94,7 @@ export function summarize(run) {
       const more = bad.length > 1 ? `, plus ${bad.length - 1} more mismatch${bad.length > 2 ? "es" : ""}` : "";
       return `${fieldZh(f.field)} mismatch: SI "${si || pair.si}" vs BL "${bl || pair.bl}". ${tries} defences failed${more}`;
     }
-    return "Held. Open the card for the seven-field compare.";
+    return "Held on the original court pass. After format the compared fields agree.";
   }
   if (v === "PILOT") {
     const r = pilotReasons(run);
@@ -116,6 +116,9 @@ export function label(run) {
 
 export function fieldStateCounts(run) {
   const c = { MATCH: 0, MISMATCH: 0, UNCERTAIN: 0 };
-  for (const f of orderedFields(run)) c[f.state] = (c[f.state] || 0) + 1;
+  for (const f of orderedFields(run)) {
+    const st = effectiveState(f);
+    c[st] = (c[st] || 0) + 1;
+  }
   return c;
 }

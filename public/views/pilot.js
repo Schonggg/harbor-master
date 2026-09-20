@@ -1,11 +1,11 @@
 // ③ Pilot deck — the human in the loop. One decision becomes a ledger rule, the
 // ledger replays history, and the queue visibly collapses.
-import { store as bridgeStore } from "../lib/store.js?v=54";
+import { store as bridgeStore } from "../lib/store.js?v=55";
 import { esc, $, $$, on, shortId, diffChars, renderDiff, fmtUsd, sourceWaitHtml } from "../lib/dom.js";
 import { gsap, reduced, enter, countTo, collapseOut, pulse } from "../lib/motion.js";
 import { fieldZh, fieldEn, RISK, failureZh } from "../lib/copy.js";
-import { card, orderedFields, pilotReasons, ledgerRef, confidenceOf } from "../lib/case.js?v=54";
-import { effectiveState, present } from "../lib/field-display.js?v=54";
+import { card, orderedFields, pilotReasons, ledgerRef, confidenceOf } from "../lib/case.js?v=55";
+import { effectiveState, present } from "../lib/field-display.js?v=55";
 
 export function mount(root, ctx, params = {}) {
   const store = ctx.store || bridgeStore;
@@ -236,7 +236,7 @@ export function mount(root, ctx, params = {}) {
         <h2>${esc(c.subject || run.email_id)}</h2>
         ${reasons.length ? `<div class="reason-line" style="margin-top:.5rem"><span class="muted">Why the hand went up</span>${reasons.map((r) => `<span class="chip warn">${esc(r.text)}</span>`).join("")}</div>` : ""}
       </div>
-      ${lockable.length > 1 ? `<div class="seg">${lockable.map((f) => `<button type="button" data-field="${esc(f.field)}" class="${f.field === field ? `on v s-${f.state}` : ""}">${esc(fieldZh(f.field))}</button>`).join("")}</div>` : ""}
+      ${lockable.length > 1 ? `<div class="seg">${lockable.map((f) => `<button type="button" data-field="${esc(f.field)}" class="${f.field === field ? `on v s-${effectiveState(f)}` : ""}">${esc(fieldZh(f.field))}</button>`).join("")}</div>` : ""}
       ${body}
       ${ledgerNotes(run)}`;
     if (swap) enter([mainEl], { y: 10, duration: 0.35 });
@@ -333,10 +333,10 @@ export function mount(root, ctx, params = {}) {
       <div>
         <div class="section-title"><h3>${esc(fieldZh(fv.field))} <span class="muted" style="font-weight:400;font-size:.8rem">${esc(fieldEn(fv.field))} · ${esc(RISK[fv.risk_level] || "")} risk · exposure ${fmtUsd(fv.exposure_usd)}</span></h3><small>Confidence ${conf != null ? Math.round(conf * 100) : "-"}%</small></div>
         <div class="evidence-split">
-          ${pane("SI", L, dl)}
-          ${pane("BL", R, dr)}
+          ${pane("SI", L, dl, lShow)}
+          ${pane("BL", R, dr, rShow)}
         </div>
-        <p class="rationale" style="margin-top:.7rem">${fv.state === "UNCERTAIN"
+        <p class="rationale" style="margin-top:.7rem">${effectiveState(fv) === "UNCERTAIN"
           ? `Defence tried ${(fv.pleas || []).length} strategies and none held, but confidence is too low to hold. Treat as same or confirm the discrepancy — that pair is written to the Ledger.`
           : `The court already called this a mismatch. Confirm it (or treat as same) to lock the pair into the Ledger so later mail reuses the ruling.`}</p>
         ${similar.length ? `<p class="pilot-hint">Locking this writes a Ledger rule and immediately replays <b style="color:var(--text)">${similar.length}</b> historical cases with the same writing.</p>` : `<p class="pilot-hint">Treat as same / Confirm discrepancy writes the first Ledger rule. CLEAR / HOLD above only closes this mail.</p>`}
@@ -350,11 +350,12 @@ export function mount(root, ctx, params = {}) {
       </div>`;
   }
 
-  function pane(side, v, diff) {
+  function pane(side, v, diff, shown) {
     const ev = v.evidence || {};
+    const code = shown?.locode ? `<span class="locode">${esc(shown.locode)}</span>` : "";
     return `<div class="evidence-pane">
       <div class="label">${side}</div>
-      <div class="val">${renderDiff(diff)}</div>
+      <div class="val">${renderDiff(diff)}${code}</div>
       <div class="src"><span class="chip">${esc({ ocr: "OCR scan", email_body: "Email body", text: "Text", vision: "Vision model" }[ev.source] || ev.source || "Text")}</span>${ev.attachment_name ? `<span class="chip mono">${esc(ev.attachment_name)}</span>` : ""}<span class="conf ${v.confidence < 0.75 ? "low" : ""}"><i style="--p:${v.confidence}"></i>${Math.round(v.confidence * 100)}%</span></div>
     </div>`;
   }
@@ -384,7 +385,7 @@ export function mount(root, ctx, params = {}) {
     if (!ruled.length) return "";
     return `<div>
       <div class="section-title"><h3>Fields already ruled by a ledger rule</h3><small>RULE SOURCE</small></div>
-      ${ruled.map((f) => { const ref = ledgerRef(f); const rule = store.ruleById(ref.ruleId); return `<div class="rule-src s-${f.state}" style="margin-bottom:.4rem"><b style="color:var(--v)">${esc(fieldZh(f.field))} · ${f.state}</b> · from ${esc(rule?.created_by || "operator")} on case <code>#${shortId(rule?.source_case_id || ref.ruleId)}</code>, rule <code>#${shortId(ref.ruleId)}</code>${ref.replayed ? " (rewritten on replay)" : ""}</div>`; }).join("")}
+      ${ruled.map((f) => { const ref = ledgerRef(f); const rule = store.ruleById(ref.ruleId); const st = effectiveState(f); return `<div class="rule-src s-${st}" style="margin-bottom:.4rem"><b style="color:var(--v)">${esc(fieldZh(f.field))} · ${st}</b> · from ${esc(rule?.created_by || "operator")} on case <code>#${shortId(rule?.source_case_id || ref.ruleId)}</code>, rule <code>#${shortId(ref.ruleId)}</code>${ref.replayed ? " (rewritten on replay)" : ""}</div>`; }).join("")}
     </div>`;
   }
 

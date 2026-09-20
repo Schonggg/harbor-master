@@ -1,11 +1,11 @@
 // ⑤ Chaos — four red buttons. The point is not that the system survives; it is
 // that it raises its hand honestly: detect → flag → hand to pilot, with a
 // DEGRADED tag whenever the LLM was cut.
-import { store as bridgeStore } from "../lib/store.js?v=54";
+import { store as bridgeStore } from "../lib/store.js?v=55";
 import { esc, $, $$, on, shortId, sleep } from "../lib/dom.js";
 import { gsap, reduced, enter, shake, pulse, tiltify } from "../lib/motion.js";
 import { CHAOS, failureZh, VERDICT, scoutZh } from "../lib/copy.js";
-import { pilotReasons } from "../lib/case.js";
+import { pilotReasons } from "../lib/case.js?v=55";
 
 export function mount(root, ctx) {
   const store = ctx.store || bridgeStore;
@@ -16,7 +16,7 @@ export function mount(root, ctx) {
       <div class="view-head">
         <div>
           <h1>Chaos <small>SMASH THE STAGE</small></h1>
-          <p>Four ways to smash the stage. Watch whether the system <b>raises its hand honestly</b> when it detects a fault, instead of inventing an answer. Every button really re-runs the pipeline.</p>
+          <p>Four ways to break a live case. Watch whether the system <b>raises its hand honestly</b> when it detects a fault, instead of inventing an answer. Every button really re-runs the pipeline.</p>
         </div>
         <div class="view-actions"><button type="button" class="btn btn-outline-hold" id="chaos-reset">Refresh board</button></div>
       </div>

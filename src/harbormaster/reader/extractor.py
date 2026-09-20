@@ -60,7 +60,11 @@ def _clean_extracted(name: str, raw: str, text: str = "") -> str:
     value = (raw or "").strip()
     if name in {"port_of_loading", "port_of_discharge"}:
         value = _POL_POD_PREFIX.sub("", value).strip()
-    value = _ROLE_PREFIX.sub("", value).strip()
+    for _ in range(4):
+        nxt = _ROLE_PREFIX.sub("", value).strip()
+        if nxt == value:
+            break
+        value = nxt
     if name == "vessel_voyage":
         value = _attach_voyage(text, value)
     return value

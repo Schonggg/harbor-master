@@ -33,7 +33,7 @@ export function fieldEn(name) {
 
 export const STRATEGIES = {
   suffix_strip: { zh: "Suffix strip", hint: "Drop CO., LTD. / INC / GMBH and punctuation, then compare" },
-  locode_map: { zh: "LOCODE map", hint: "Map port names and UN/LOCODE five-letter codes to one entity" },
+  locode_map: { zh: "LOCODE map", hint: "Singapore and Singapore (SGSIN) are the same port. Map names and UN/LOCODE codes to one entity" },
   unit_convert: { zh: "Unit convert", hint: "Normalise MT / LBS / KGS to kilograms before compare" },
   ref_resolve: { zh: "Reference resolve", hint: "Resolve SAME AS CONSIGNEE style pointers to the real party" },
   numeric_extract: { zh: "Numeric extract", hint: "Pull the number head from prose like THREE (3) x 40HC" },
@@ -85,7 +85,7 @@ export const VERDICT = {
 export const STATE = {
   MATCH: "Match",
   MISMATCH: "Mismatch",
-  UNCERTAIN: "Uncertain",
+  UNCERTAIN: "Review",
 };
 
 export const RISK = {

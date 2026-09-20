@@ -1,9 +1,10 @@
 // ④ Ledger — every rule a pilot ever taught the system, with provenance and revoke.
-import { store as bridgeStore } from "../lib/store.js?v=54";
+import { store as bridgeStore } from "../lib/store.js?v=55";
 import { esc, $, $$, on, shortId, fmtTime } from "../lib/dom.js";
 import { enter } from "../lib/motion.js";
 import { fieldZh } from "../lib/copy.js";
-import { card, orderedFields, ledgerRef } from "../lib/case.js";
+import { card, orderedFields, ledgerRef } from "../lib/case.js?v=55";
+import { present, effectiveState } from "../lib/field-display.js?v=55";
 
 export function mount(root, ctx) {
   const store = ctx.store || bridgeStore;
@@ -48,10 +49,12 @@ export function mount(root, ctx) {
       const acc = r.decision === "accept_as_match";
       const hits = usage(r.rule_id);
       const src = store.runById(r.source_case_id);
+      const left = present(r.field, r.left_pattern);
+      const right = present(r.field, r.right_pattern);
       return `<div class="rule ${r.active ? "" : "revoked"} ${acc ? "s-MATCH" : "s-MISMATCH"}">
         <div class="rid">#${shortId(r.rule_id)}<small>${r.active ? "ACTIVE" : "REVOKED"}</small></div>
         <div class="pair">
-          <div class="eq"><span class="chip">${esc(fieldZh(r.field))}</span><b>${esc(r.left_pattern)}</b><span class="op">${acc ? "≡" : "≠"}</span><b>${esc(r.right_pattern)}</b></div>
+          <div class="eq"><span class="chip">${esc(fieldZh(r.field))}</span><b>${esc(left.text || r.left_pattern)}</b>${left.locode ? `<span class="locode">${esc(left.locode)}</span>` : ""}<span class="op">${acc ? "≡" : "≠"}</span><b>${esc(right.text || r.right_pattern)}</b>${right.locode ? `<span class="locode">${esc(right.locode)}</span>` : ""}</div>
           <div class="meta">
             <span>Locked by <b>${esc(r.created_by)}</b> on case <button type="button" class="btn btn-sm" data-open="${esc(src?.run_id || r.source_case_id)}">#${shortId(r.source_case_id)}</button></span>
             <span>· ${fmtTime(r.created_at)}</span>
@@ -59,7 +62,7 @@ export function mount(root, ctx) {
             ${r.note ? `<span>· ${esc(r.note)}</span>` : ""}
             ${r.revoked_at ? `<span>· revoked ${fmtTime(r.revoked_at)}</span>` : ""}
           </div>
-          ${hits.length ? `<div class="affected">${hits.slice(0, 6).map((h) => `<span>#${shortId(h.run.run_id)} ${esc(card(h.run).subject || "")} <b style="color:var(--v)">${h.fv.state}</b> <button type="button" class="btn btn-sm" data-open="${esc(h.run.run_id)}">Open</button></span>`).join("")}${hits.length > 6 ? `<span class="muted">…${hits.length - 6} more</span>` : ""}</div>` : ""}
+          ${hits.length ? `<div class="affected">${hits.slice(0, 6).map((h) => `<span>#${shortId(h.run.run_id)} ${esc(card(h.run).subject || "")} <b style="color:var(--v)">${effectiveState(h.fv)}</b> <button type="button" class="btn btn-sm" data-open="${esc(h.run.run_id)}">Open</button></span>`).join("")}${hits.length > 6 ? `<span class="muted">…${hits.length - 6} more</span>` : ""}</div>` : ""}
         </div>
         <div>${r.active ? `<button type="button" class="btn btn-sm btn-outline-hold" data-revoke="${esc(r.rule_id)}">Revoke</button>` : `<span class="chip ghost">Revoked</span>`}</div>
       </div>`;

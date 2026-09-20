@@ -41,6 +41,21 @@ export function pairWritings(fv, email) {
   return { si, bl };
 }
 
+/** Formatted SI/BL pair for the table. Same fact → same visible text. */
+export function pairView(fv, email) {
+  const pair = pairWritings(fv, email);
+  const state = effectiveState(fv, pair.si, pair.bl);
+  let L = present(fv.field, pair.si);
+  let R = present(fv.field, pair.bl);
+  if (state === "MATCH" && (L.text || R.text || L.locode || R.locode)) {
+    const locode = L.locode || R.locode;
+    const text = pickSharedText(fv.field, L, R);
+    L = { text, locode, empty: !text && !locode };
+    R = { text, locode, empty: !text && !locode };
+  }
+  return { si: pair.si, bl: pair.bl, L, R, state };
+}
+
 export function effectiveState(fv, si = writingOf(fv, "si"), bl = writingOf(fv, "bl")) {
   const stored = fv?.state || "MATCH";
   if (stored === "UNCERTAIN") return "UNCERTAIN";
@@ -52,16 +67,25 @@ export function effectiveState(fv, si = writingOf(fv, "si"), bl = writingOf(fv, 
 export function sameFact(field, left, right) {
   const a = coreOf(field, left);
   const b = coreOf(field, right);
-  if (!a || !b) return false;
+  if (a === "" || b === "") return false;
   if (a === b) return true;
-  if (field === "vessel_voyage") return vesselEquivalent(a, b);
+  if (field === "vessel_voyage") return vesselEquivalent(fold(stripRole(left)), fold(stripRole(right)));
   return false;
 }
 
 export function coreOf(field, raw) {
   let text = stripRole(raw);
-  if (PORTS.has(field)) text = text.replace(PAREN, " ");
-  if (field === "vessel_voyage") text = text.replace(PAREN, " ");
+  if (!text) return "";
+  if (field === "gross_weight_kg" || field === "gross_weight") {
+    const n = firstNumber(text);
+    return n == null ? "" : String(n);
+  }
+  if (field === "container_count") {
+    const n = firstNumber(text);
+    return n == null ? "" : String(n);
+  }
+  if (PARTIES.has(field)) text = text.replace(/\s*\|.*$/s, "");
+  if (PORTS.has(field) || field === "vessel_voyage") text = text.replace(PAREN, " ");
   return fold(text);
 }
 
@@ -70,15 +94,28 @@ export function present(field, raw) {
   if (!original) return { text: "", locode: "", empty: true };
   const stripped = stripRole(original);
   if (PORTS.has(field)) {
+    const compact = stripped.replace(/\s+/g, "").toUpperCase();
+    if (LOCODE.test(compact) && compact.length === 5 && !stripped.includes("(")) {
+      return { text: compact, locode: "", empty: false };
+    }
     const locode = locodeOf(stripped);
     const name = titleCase(stripped.replace(PAREN, " "));
     return { text: name || stripped, locode, empty: !name };
   }
   if (PARTIES.has(field)) {
-    return { text: titleCase(stripped.replace(/\s+/g, " ")), locode: "", empty: !stripped };
+    return { text: titleCase(stripped.replace(/\s*\|.*$/s, "").replace(/\s+/g, " ")), locode: "", empty: !stripped };
   }
   if (field === "vessel_voyage") {
     return { text: formatVessel(stripped), locode: "", empty: !stripped };
+  }
+  if (field === "container_count") {
+    const n = firstNumber(stripped);
+    return { text: n == null ? stripped.replace(/\s+/g, " ") : String(n), locode: "", empty: n == null && !stripped };
+  }
+  if (field === "gross_weight_kg" || field === "gross_weight") {
+    const n = firstNumber(stripped);
+    if (n == null) return { text: stripped.replace(/\s+/g, " "), locode: "", empty: !stripped };
+    return { text: `${n.toLocaleString("en-US")} kg`, locode: "", empty: false };
   }
   return { text: stripped.replace(/\s+/g, " "), locode: "", empty: !stripped };
 }
@@ -111,7 +148,31 @@ export function valueFromBody(body, side, field) {
 }
 
 function stripRole(raw) {
-  return String(raw || "").replace(ROLE, "").trim();
+  let text = String(raw || "").trim();
+  for (let i = 0; i < 4; i++) {
+    const next = text.replace(ROLE, "").trim();
+    if (next === text) break;
+    text = next;
+  }
+  return text;
+}
+
+function firstNumber(raw) {
+  const hit = /[\d.]+/.exec(String(raw || "").replace(/,/g, ""));
+  if (!hit) return null;
+  const n = Number(hit[0]);
+  return Number.isFinite(n) ? Math.round(n) : null;
+}
+
+function pickSharedText(field, L, R) {
+  const a = L.text || "";
+  const b = R.text || "";
+  if (field === "vessel_voyage") {
+    if (a.includes("·") && !b.includes("·")) return a;
+    if (b.includes("·") && !a.includes("·")) return b;
+  }
+  if (a === b) return a;
+  return a.length >= b.length ? a : b;
 }
 
 function fold(text) {
@@ -157,8 +218,8 @@ function titleCase(raw) {
 function formatVessel(raw) {
   const text = String(raw || "").replace(/\s+/g, " ").trim();
   const m = /^(.*?)(?:\s+\/\s*|\s+)(V\.\S+)$/i.exec(text);
-  if (m) return `${m[1].trim()} · ${m[2].toUpperCase()}`;
-  return text;
+  if (m) return `${titleCase(m[1].trim())} · ${m[2].toUpperCase()}`;
+  return titleCase(text);
 }
 
 function vesselEquivalent(a, b) {

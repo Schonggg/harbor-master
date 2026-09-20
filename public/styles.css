@@ -1150,34 +1150,62 @@ select.ctl, input.ctl {
 }
 
 /* field table */
-.ftable { display: grid; gap: 0.4rem; }
+.cmp-hits { display: grid; gap: 0.45rem; margin: 0 0 0.85rem; }
+.cmp-hit {
+  display: grid;
+  grid-template-columns: 8.6rem minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 0.55rem;
+  align-items: center;
+  padding: 0.62rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--hold) 55%, var(--line));
+  background: color-mix(in srgb, var(--hold) 12%, transparent);
+  border-radius: 10px;
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+}
+.cmp-hit b { font-family: var(--font-sans); font-size: 0.82rem; }
+.cmp-hit i {
+  font-style: normal;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  color: var(--hold);
+}
+.ftable {
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
+}
 .frow {
   display: grid;
   grid-template-columns: 1.15fr 1.6fr 1.6fr 0.9fr auto;
   gap: 0.8rem;
   align-items: center;
-  padding: 0.7rem 0.9rem;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.02);
-  transition: border-color 0.2s, background 0.2s;
+  padding: 0.78rem 0.95rem;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  transition: background 0.2s;
 }
 .frow.head {
-  background: transparent;
-  border-color: transparent;
-  padding-top: 0;
-  padding-bottom: 0.2rem;
+  background: rgba(255, 255, 255, 0.045);
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
   font-family: var(--font-mono);
   font-size: 0.68rem;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   color: var(--text-3);
 }
-.frow:not(.head):hover { border-color: var(--line-strong); background: rgba(255, 255, 255, 0.035); }
-.frow.open { border-color: color-mix(in srgb, var(--v) 45%, var(--line)); }
+.frow:last-child { border-bottom: none; }
+.frow:not(.head):hover { background: rgba(255, 255, 255, 0.035); }
+.frow.open { background: color-mix(in srgb, var(--v) 8%, transparent); }
 .fname { display: grid; gap: 0.1rem; }
 .fname b { font-weight: 600; }
 .fname small { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text-3); letter-spacing: 0.06em; }
-.fval { font-family: var(--font-mono); font-size: 0.9rem; word-break: break-word; }
+.fval { font-family: var(--font-mono); font-size: 0.92rem; word-break: break-word; }
 .fval.none { color: var(--text-3); }
 .cmp-lead {
   color: var(--text-2);
@@ -1186,16 +1214,15 @@ select.ctl, input.ctl {
   max-width: 62ch;
 }
 .cmp-bad { color: var(--hold); }
-.frow.s-MATCH { background: rgba(255, 255, 255, 0.018); }
+.frow.s-MATCH { background: rgba(255, 255, 255, 0.012); }
 .frow.s-MISMATCH {
-  border-color: color-mix(in srgb, var(--hold) 58%, var(--line));
-  background: color-mix(in srgb, var(--hold) 11%, transparent);
+  background: color-mix(in srgb, var(--hold) 13%, transparent);
   box-shadow: inset 3px 0 0 var(--hold);
 }
 .frow.s-UNCERTAIN {
-  border-color: color-mix(in srgb, var(--pilot) 50%, var(--line));
-  background: color-mix(in srgb, var(--pilot) 9%, transparent);
+  background: color-mix(in srgb, var(--pilot) 10%, transparent);
 }
+.extra-ftable { margin-top: 0.15rem; }
 .frow.s-MATCH .fval { color: var(--text-2); }
 .frow.s-MISMATCH .fval { color: var(--text); font-weight: 550; }
 .fval mark {
@@ -1229,14 +1256,15 @@ select.ctl, input.ctl {
 }
 .fstate::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--v); box-shadow: 0 0 10px var(--v); }
 .fmore { display: flex; gap: 0.35rem; }
-.fdetail {
-  grid-column: 1 / -1;
+.ftable .fdetail {
   display: grid;
   gap: 0.8rem;
-  padding: 0.6rem 0.2rem 0.2rem;
-  border-top: 1px dashed var(--line);
-  margin-top: 0.3rem;
+  margin: 0;
+  padding: 0.75rem 0.95rem 1rem;
+  border-top: none;
+  background: rgba(0, 0, 0, 0.16);
 }
+.ftable .fdetail[hidden] { display: none; }
 .rule-src {
   font-size: 0.82rem;
   color: var(--signal);
@@ -2175,6 +2203,8 @@ input[type="range"].dial::-moz-range-thumb {
   }
   .fval[data-fill^="si"]::before { content: "SI"; }
   .fval[data-fill^="bl"]::before { content: "BL"; }
+  .cmp-hit { grid-template-columns: 1fr; gap: 0.2rem; }
+  .cmp-hit i { display: none; }
   .versus { grid-template-columns: 1fr; }
   .versus .vs { justify-self: center; }
   .evidence-split { grid-template-columns: 1fr; }

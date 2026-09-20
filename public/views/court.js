@@ -1,12 +1,12 @@
 // ② Court — prosecutor files a charge, the defender tries each deterministic
 // strategy one by one, the judge rules. A GSAP timeline gives it courtroom
 // pacing: slow enough to read, fast enough to keep the room.
-import { store as bridgeStore } from "../lib/store.js?v=54";
+import { store as bridgeStore } from "../lib/store.js?v=55";
 import { esc, $, $$, on, shortId, fmtUsd, diffChars, renderDiff } from "../lib/dom.js";
 import { gsap, reduced, enter } from "../lib/motion.js";
-import { fieldZh, fieldEn, strategyZh, STRATEGIES, RISK } from "../lib/copy.js";
-import { card, courtFields, orderedFields, confidenceOf, ledgerRef } from "../lib/case.js?v=54";
-import { present } from "../lib/field-display.js?v=54";
+import { fieldZh, fieldEn, strategyZh, STRATEGIES, RISK, STATE } from "../lib/copy.js";
+import { card, courtFields, orderedFields, confidenceOf, ledgerRef } from "../lib/case.js?v=55";
+import { present, effectiveState } from "../lib/field-display.js?v=55";
 
 const STRATEGY_ORDER = Object.keys(STRATEGIES).filter((k) => k !== "ledger");
 
@@ -98,7 +98,8 @@ export function mount(root, ctx, params = {}) {
     const cf = run ? courtFields(run) : [];
     fieldTabs.innerHTML = run ? all.map((f) => {
       const inCourt = cf.includes(f);
-      return `<button type="button" class="field-tab s-${f.state} ${inCourt ? "" : "quiet"} ${f.field === field ? "on" : ""}" data-field="${esc(f.field)}" ${inCourt ? "" : "tabindex=-1"}><span>${esc(fieldZh(f.field))}</span><span class="st">${inCourt ? f.state : "uncontested"}</span></button>`;
+      const st = effectiveState(f);
+      return `<button type="button" class="field-tab s-${st} ${inCourt ? "" : "quiet"} ${f.field === field ? "on" : ""}" data-field="${esc(f.field)}" ${inCourt ? "" : "tabindex=-1"}><span>${esc(fieldZh(f.field))}</span><span class="st">${inCourt ? (STATE[st] || st) : "uncontested"}</span></button>`;
     }).join("") : "";
   }
 
@@ -157,7 +158,7 @@ export function mount(root, ctx, params = {}) {
               <div class="body">
                 <div class="name">${esc(strategyZh(p.strategy))}<code>${esc(p.strategy)}</code></div>
                 <div class="arg">${esc(p.argument || STRATEGIES[p.strategy]?.hint || "")}</div>
-                ${p.transformed_left != null || p.transformed_right != null ? `<div class="xform"><b>${esc(p.transformed_left ?? L.raw_value)}</b><span class="ar">${p.accepted ? "≡" : "≠"}</span><b>${esc(p.transformed_right ?? R.raw_value)}</b></div>` : ""}
+                ${p.transformed_left != null || p.transformed_right != null ? `<div class="xform"><b>${esc(present(fv.field, p.transformed_left ?? L.raw_value).text || p.transformed_left)}</b><span class="ar">${p.accepted ? "≡" : "≠"}</span><b>${esc(present(fv.field, p.transformed_right ?? R.raw_value).text || p.transformed_right)}</b></div>` : ""}
               </div>
               <span class="stamp">${p.accepted ? "✓ holds" : "✗ fails"}</span>
             </div>`).join("")}
