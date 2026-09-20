@@ -1,6 +1,7 @@
 // Case-level derived text: one-line summaries, pilot reasons, ledger references.
 import { FIELD_ORDER, fieldZh, strategyZh, failureZh } from "./copy.js";
 import { shortId } from "./dom.js";
+import { SEVEN_FIELDS, effectiveState, pairWritings, present } from "./field-display.js?v=54";
 
 export function card(run) {
   return run?.payload?.card || {};
@@ -8,17 +9,36 @@ export function card(run) {
 
 export function orderedFields(run) {
   const fvs = card(run).field_verdicts || [];
+  const names = new Set(fvs.map((f) => f.field));
   const idx = (f) => { const i = FIELD_ORDER.indexOf(f.field); return i < 0 ? 99 : i; };
-  return [...fvs].sort((a, b) => idx(a) - idx(b));
+  return [...fvs]
+    .filter((f) => !(f.field === "gross_weight" && names.has("gross_weight_kg")))
+    .sort((a, b) => idx(a) - idx(b));
+}
+
+export function sevenFields(run) {
+  const by = Object.fromEntries(orderedFields(run).map((f) => [f.field, f]));
+  return SEVEN_FIELDS.map((name) => {
+    if (name === "gross_weight_kg") return by.gross_weight_kg || by.gross_weight || null;
+    return by[name] || null;
+  }).filter(Boolean);
+}
+
+export function extraFields(run) {
+  const seven = new Set(sevenFields(run).map((f) => f.field));
+  return orderedFields(run).filter((f) => !seven.has(f.field) && f.field !== "gross_weight");
 }
 
 export function chargedFields(run) {
-  return orderedFields(run).filter((f) => f.charge);
+  return orderedFields(run).filter((f) => f.charge && effectiveState(f) !== "MATCH");
 }
 
-/** Fields worth putting in front of a judge: charged, or ledger-decided. */
+/** Fields worth putting in front of a judge: still disputed after format. */
 export function courtFields(run) {
-  return orderedFields(run).filter((f) => f.charge || /^ledger/.test(f.rationale || ""));
+  return orderedFields(run).filter((f) => {
+    if (effectiveState(f) === "MATCH" && !/^ledger/.test(f.rationale || "")) return false;
+    return !!(f.charge || /^ledger/.test(f.rationale || ""));
+  });
 }
 
 export function ledgerRef(fv) {
@@ -64,14 +84,17 @@ export function summarize(run) {
   const v = c.verdict || run.verdict;
   const fvs = orderedFields(run);
   if (v === "HOLD") {
-    const bad = fvs.filter((f) => f.state === "MISMATCH");
+    const bad = fvs.filter((f) => effectiveState(f) === "MISMATCH");
     const f = bad[0];
-    if (f?.charge) {
+    if (f) {
+      const pair = pairWritings(f);
+      const si = present(f.field, pair.si).text;
+      const bl = present(f.field, pair.bl).text;
       const tries = (f.pleas || []).length;
       const more = bad.length > 1 ? `, plus ${bad.length - 1} more mismatch${bad.length > 2 ? "es" : ""}` : "";
-      return `${fieldZh(f.field)} mismatch: SI "${f.charge.left?.raw_value}" vs BL "${f.charge.right?.raw_value}". ${tries} defences failed${more}`;
+      return `${fieldZh(f.field)} mismatch: SI "${si || pair.si}" vs BL "${bl || pair.bl}". ${tries} defences failed${more}`;
     }
-    return `${bad.map((b) => fieldZh(b.field)).join(", ")}: real discrepancy`;
+    return "Held. Open the card for the seven-field compare.";
   }
   if (v === "PILOT") {
     const r = pilotReasons(run);
@@ -84,7 +107,7 @@ export function summarize(run) {
     const names = [...new Set(defended.map((f) => strategyZh(f.winning_strategy)))].slice(0, 3).join(", ");
     return `${n} fields agree; ${defended.length} held after defence (${names})`;
   }
-  return `${n} fields match character for character. No defence needed.`;
+  return "All compared fields agree.";
 }
 
 export function label(run) {

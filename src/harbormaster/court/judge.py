@@ -86,6 +86,8 @@ class Judge:
             risk_level=RiskLevel(risk.risk_level),
             exposure_usd=risk.exposure_usd,
             advise=risk.advise,
+            left_value=charge.left.raw_value,
+            right_value=charge.right.raw_value,
         )
         if tw:
             tw.verdict(fv)
@@ -109,6 +111,8 @@ class Judge:
                 continue
             if name in left_doc.fields and name in right_doc.fields:
                 risk = self.risk.for_field(name)
+                left_raw = left_doc.fields[name].raw_value
+                right_raw = right_doc.fields[name].raw_value
                 fv = FieldVerdict(
                     field=name,
                     state=CourtState.MATCH,
@@ -116,6 +120,8 @@ class Judge:
                     risk_level=RiskLevel(risk.risk_level),
                     exposure_usd=risk.exposure_usd,
                     advise=risk.advise,
+                    left_value=left_raw,
+                    right_value=right_raw,
                 )
                 transcript.add("verdict", name, {"state": "MATCH", "rationale": "raw equality"})
                 verdicts.append(fv)

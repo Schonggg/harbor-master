@@ -16,6 +16,28 @@ def test_kgs_commas():
     assert parse_weight_kg("25,400 KGS") == 25400.0
 
 
+def test_board_payload_keeps_match_writings():
+    slim = _board_payload(
+        {
+            "card": {
+                "field_verdicts": [
+                    {
+                        "field": "shipper",
+                        "state": "MATCH",
+                        "left_value": "ABC SDN BHD",
+                        "right_value": "ABC SDN BHD",
+                        "rationale": "raw equality",
+                    }
+                ]
+            }
+        }
+    )
+    fv = slim["card"]["field_verdicts"][0]
+    assert fv["charge"] is None
+    assert fv["left_value"] == "ABC SDN BHD"
+    assert fv["right_value"] == "ABC SDN BHD"
+
+
 def test_board_payload_keeps_defence_strategy():
     slim = _board_payload(
         {

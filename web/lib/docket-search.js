@@ -36,7 +36,7 @@ function haystack(run) {
     ...(c.failure_codes || []),
   ];
   for (const fv of c.field_verdicts || []) {
-    bits.push(fv.field, fv.state, fv.charge?.left?.raw_value, fv.charge?.right?.raw_value);
+    bits.push(fv.field, fv.state, fv.charge?.left?.raw_value, fv.charge?.right?.raw_value, fv.left_value, fv.right_value);
   }
   return bits.filter((x) => x != null && x !== "").join("\n").toLowerCase();
 }

@@ -1,10 +1,11 @@
 // ① Verdict board — Worldwide Hubs: three offices, then the docket.
-import { store as bridgeStore } from "../lib/store.js?v=53";
+import { store as bridgeStore } from "../lib/store.js?v=54";
 import { esc, $, $$, on, shortId } from "../lib/dom.js";
 import { enter, countTo, magnetize, tiltify, scrollToY } from "../lib/motion.js";
-import { FIELD_ORDER, scoutZh, VERDICT, fieldZh } from "../lib/copy.js";
-import { card, orderedFields, summarize } from "../lib/case.js?v=12";
-import { highlightText, matchesRun, rankRun } from "../lib/docket-search.js?v=53";
+import { scoutZh, VERDICT, fieldZh } from "../lib/copy.js";
+import { card, orderedFields, summarize, courtFields } from "../lib/case.js?v=54";
+import { highlightText, matchesRun, rankRun } from "../lib/docket-search.js?v=54";
+import { SEVEN_FIELDS } from "../lib/field-display.js?v=54";
 
 const HUBS = [
   {
@@ -110,7 +111,7 @@ export function mount(root, ctx) {
         <div class="docket-head">
           <div>
             <h2>Docket</h2>
-            <p id="docket-copy">One card per email. Open any card for the seven-field compare.</p>
+            <p id="docket-copy">One card per email. Open any card to see SI versus BL on the seven fields.</p>
           </div>
           <button type="button" class="btn" id="board-refresh">Refresh</button>
         </div>
@@ -269,8 +270,8 @@ export function mount(root, ctx) {
 
   function fieldStrip(run) {
     const byName = Object.fromEntries(orderedFields(run).map((f) => [f.field, f]));
-    return `<div class="field-strip" aria-hidden="true">${FIELD_ORDER.map((f) => {
-      const fv = byName[f];
+    return `<div class="field-strip" aria-hidden="true">${SEVEN_FIELDS.map((f) => {
+      const fv = f === "gross_weight_kg" ? (byName.gross_weight_kg || byName.gross_weight) : byName[f];
       return fv ? `<i class="s-${fv.state}" title="${esc(fieldZh(f))} · ${fv.state}"></i>` : `<i class="none"></i>`;
     }).join("")}</div>`;
   }
@@ -304,7 +305,7 @@ export function mount(root, ctx) {
           <h3 title="${esc(r.subject || r.email_id)}">${state.query.trim() ? highlightText(r.subject || r.email_id, state.query) : esc(r.subject || r.email_id)}</h3>
           <p class="summary">${esc(r.from_addr || "Official SDOC inbox")} — waiting for Scout → extract → court.</p>
           <div class="foot">
-            <div class="field-strip" aria-hidden="true">${FIELD_ORDER.map(() => `<i class="none"></i>`).join("")}</div>
+            <div class="field-strip" aria-hidden="true">${SEVEN_FIELDS.map(() => `<i class="none"></i>`).join("")}</div>
             <span class="id">${state.query.trim() ? highlightText(r.email_id, state.query) : esc(r.email_id)}</span>
           </div>
         </article>`;
@@ -312,7 +313,7 @@ export function mount(root, ctx) {
       const c = card(r);
       const v = c.verdict || r.verdict;
       const label = c.scout?.label || "unknown";
-      const charged = orderedFields(r).filter((f) => f.charge).length;
+      const charged = courtFields(r).length;
       return `
         <article class="mail-card v-${v}" data-run="${esc(r.run_id)}" tabindex="0" role="button" aria-label="${esc(c.subject || r.email_id)}">
           <div class="row">
@@ -372,9 +373,9 @@ export function mount(root, ctx) {
       if (jobFresh) {
         copy.textContent = `Loading official inbox onto the board · ${Math.max(job.processed || 0, official)} / ${job.total || inbox || 520}. Cards appear as each email is judged.`;
       } else if (official || inbox) {
-        copy.textContent = `Official SDOC inbox · ${official} judged${pending ? ` · ${pending} queued` : ""} · ${inbox || 520} files. Open a card for the seven-field compare.`;
+        copy.textContent = `Official SDOC inbox · ${official} judged${pending ? ` · ${pending} queued` : ""} · ${inbox || 520} files. Open a card to see SI versus BL.`;
       } else {
-        copy.textContent = "One card per email. Open any card for the seven-field compare.";
+        copy.textContent = "One card per email. Open any card to see SI versus BL on the seven fields.";
       }
     }
     if (tally) {

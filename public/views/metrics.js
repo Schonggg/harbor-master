@@ -1,9 +1,10 @@
 // ⑥ Metrics + autonomy dial — false alarms as the hero number, confusion matrix,
 // field-level agreement, and a live what-if dial over the match-confidence floor.
-import { store as bridgeStore } from "../lib/store.js?v=53";
+import { store as bridgeStore } from "../lib/store.js?v=54";
 import { esc, $, $$, on } from "../lib/dom.js";
 import { enter, countTo } from "../lib/motion.js";
-import { FIELD_ORDER, fieldZh, fieldEn, PRESETS } from "../lib/copy.js";
+import { fieldZh, fieldEn, PRESETS } from "../lib/copy.js";
+import { SEVEN_FIELDS } from "../lib/field-display.js?v=54";
 
 export function mount(root, ctx) {
   const store = ctx.store || bridgeStore;
@@ -303,14 +304,14 @@ export function mount(root, ctx) {
     const m = store.s.metrics;
     const el = $("#fbars", root);
     const fs = m?.field_stats || {};
-    const names = FIELD_ORDER.filter((f) => fs[f]);
+    const names = SEVEN_FIELDS.filter((f) => fs[f] || (f === "gross_weight_kg" && fs.gross_weight));
     if (!names.length) { el.innerHTML = `<div class="empty"><p>No field data yet.</p></div>`; return; }
     el.innerHTML = names.map((f) => {
-      const s = fs[f];
+      const s = fs[f] || fs.gross_weight || {};
       const total = (s.MATCH || 0) + (s.MISMATCH || 0) + (s.UNCERTAIN || 0) || 1;
       const pct = (n) => `${((n || 0) / total) * 100}%`;
       return `<div class="fbar">
-        <div class="nm">${esc(fieldZh(f))}<small>${esc(fieldEn(f)).toUpperCase()}</small></div>
+        <div class="nm">${esc(fieldZh(f))}<small>${esc(fieldEn(f))}</small></div>
         <div class="bar"><i class="s-MATCH" style="width:${pct(s.MATCH)}"></i><i class="s-MISMATCH" style="width:${pct(s.MISMATCH)}"></i><i class="s-UNCERTAIN" style="width:${pct(s.UNCERTAIN)}"></i></div>
         <div class="cnt"><span class="s-MATCH"><b>${Math.round(((s.MATCH || 0) / total) * 100)}%</b></span><span>${s.MATCH || 0}/${s.MISMATCH || 0}/${s.UNCERTAIN || 0}</span></div>
       </div>`;

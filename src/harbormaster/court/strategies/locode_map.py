@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import re
+
 from harbormaster.config import get_locodes
 from harbormaster.models import Charge, Plea
+from harbormaster.official.compare import CompareOutcome, compare_value, fold
 
 _PORT_FIELDS = {"port_of_loading", "port_of_discharge"}
+_PAREN_LOCODE = re.compile(r"\(([A-Z]{5})\)", re.I)
+_ANY_PAREN = re.compile(r"\([^)]*\)")
 
 
 def _fold(value: str) -> str:
@@ -38,16 +43,21 @@ def _build_index() -> dict[str, str]:
 
 
 def resolve_locode(value: str) -> str | None:
-    raw = value.strip().upper()
+    raw = (value or "").strip().upper()
     if not raw:
         return None
     index = _build_index()
-    if raw in index:
-        return index[raw]
-    folded = _fold(raw)
-    if folded in index:
-        return index[folded]
-    head = raw.split(",")[0].strip()
+    paren = _PAREN_LOCODE.search(raw)
+    if paren:
+        code = paren.group(1).upper()
+        if code in index:
+            return index[code]
+        return code
+    stripped = _ANY_PAREN.sub(" ", raw).strip()
+    for key in (raw, stripped, _fold(raw), _fold(stripped)):
+        if key in index:
+            return index[key]
+    head = stripped.split(",")[0].strip()
     if head in index:
         return index[head]
     return index.get(_fold(head))
@@ -59,8 +69,20 @@ class LocodeMapStrategy:
     def try_defend(self, charge: Charge) -> Plea:
         if charge.field not in _PORT_FIELDS:
             return Plea(strategy=self.name, accepted=False, argument="not a port field")
-        left = resolve_locode(charge.left.raw_value)
-        right = resolve_locode(charge.right.raw_value)
+        left_raw = charge.left.raw_value
+        right_raw = charge.right.raw_value
+        if compare_value(charge.field, left_raw, right_raw) == CompareOutcome.MATCH:
+            same = fold(_ANY_PAREN.sub(" ", left_raw))
+            return Plea(
+                strategy=self.name,
+                accepted=True,
+                argument="same port after stripping UN/LOCODE parentheses and case",
+                transformed_left=same,
+                transformed_right=same,
+                confidence=1.0,
+            )
+        left = resolve_locode(left_raw)
+        right = resolve_locode(right_raw)
         ok = left is not None and left == right
         return Plea(
             strategy=self.name,

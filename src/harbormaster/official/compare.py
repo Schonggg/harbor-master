@@ -20,7 +20,8 @@ _LOCODE = re.compile(r"\([^)]*\)")
 _PUNCT = re.compile(r"[^\w\s]", re.UNICODE)
 _PARTY_PREFIX = re.compile(
     r"^(?:party/?\s*intermediate\s*consignee(?:\s*\([^)]*\))?|"
-    r"\(?non[-\s]?negotiable\)?)\s*:?\s*",
+    r"\(?non[-\s]?negotiable\)?|"
+    r"(?:notify(?:\s+party)?|consignee|shipper)\s*:)\s*:?\s*",
     re.I,
 )
 _PIPE_TAIL = re.compile(r"\s*\|.*$", re.S)

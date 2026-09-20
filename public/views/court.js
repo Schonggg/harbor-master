@@ -1,11 +1,12 @@
 // ② Court — prosecutor files a charge, the defender tries each deterministic
 // strategy one by one, the judge rules. A GSAP timeline gives it courtroom
 // pacing: slow enough to read, fast enough to keep the room.
-import { store as bridgeStore } from "../lib/store.js?v=53";
-import { esc, $, $$, on, shortId, fmtUsd } from "../lib/dom.js";
+import { store as bridgeStore } from "../lib/store.js?v=54";
+import { esc, $, $$, on, shortId, fmtUsd, diffChars, renderDiff } from "../lib/dom.js";
 import { gsap, reduced, enter } from "../lib/motion.js";
 import { fieldZh, fieldEn, strategyZh, STRATEGIES, RISK } from "../lib/copy.js";
-import { card, courtFields, confidenceOf, ledgerRef } from "../lib/case.js";
+import { card, courtFields, confidenceOf, ledgerRef } from "../lib/case.js?v=54";
+import { present } from "../lib/field-display.js?v=54";
 
 const STRATEGY_ORDER = Object.keys(STRATEGIES).filter((k) => k !== "ledger");
 
@@ -105,12 +106,15 @@ export function mount(root, ctx, params = {}) {
     const run = store.runById(runId);
     const fv = run ? courtFields(run).find((f) => f.field === field) : null;
     if (!run || !fv) {
-      stage.innerHTML = `<div class="empty"><h3>Court is empty</h3><p>Pick a case on the left, or go back to the Board and seed the inbox. Court only sits for fields whose two documents disagree. Character-for-character matches do not need a hearing.</p></div>`;
+      stage.innerHTML = `<div class="empty"><h3>Court is empty</h3><p>Pick a case on the left, or go back to the Board and seed the inbox. Court only sits when SI and BL still disagree after format (caps, locode, labels). Matching fields do not need a hearing.</p></div>`;
       return;
     }
     const c = card(run);
     const L = fv.charge?.left || { raw_value: "-", confidence: 1 };
     const R = fv.charge?.right || { raw_value: "-", confidence: 1 };
+    const lShow = present(fv.field, L.raw_value);
+    const rShow = present(fv.field, R.raw_value);
+    const [dl, dr] = diffChars(lShow.text || L.raw_value, rShow.text || R.raw_value);
     if ((fv.pleas || []).some((p) => !p.strategy)) store.hydrateRun?.(runId);
     const pleas = hydratePleas(fv);
     const ref = ledgerRef(fv);
@@ -135,11 +139,11 @@ export function mount(root, ctx, params = {}) {
 
       <div class="charge" id="charge">
         <div class="who">Prosecution · PROSECUTOR</div>
-        <div class="charge-line">SI writes <b>${esc(L.raw_value)}</b>. BL writes <b>${esc(R.raw_value)}</b>. Charge: <b>${esc(fieldZh(fv.field))}</b> does not match.</div>
+        <div class="charge-line">SI writes <b>${esc(lShow.text || L.raw_value)}</b>${lShow.locode ? ` <span class="locode">${esc(lShow.locode)}</span>` : ""}. BL writes <b>${esc(rShow.text || R.raw_value)}</b>${rShow.locode ? ` <span class="locode">${esc(rShow.locode)}</span>` : ""}. Charge: <b>${esc(fieldZh(fv.field))}</b> does not match.</div>
         <div class="versus">
-          <div class="side" id="side-l"><small>SI · SHIPPING INSTRUCTION</small><b>${esc(L.raw_value)}</b><span class="conf ${L.confidence < 0.75 ? "low" : ""}"><i style="--p:${L.confidence}"></i>${Math.round(L.confidence * 100)}%</span></div>
+          <div class="side" id="side-l"><small>SI · Shipping instruction</small><b>${renderDiff(dl)}${lShow.locode ? ` <span class="locode">${esc(lShow.locode)}</span>` : ""}</b><span class="conf ${L.confidence < 0.75 ? "low" : ""}"><i style="--p:${L.confidence}"></i>${Math.round(L.confidence * 100)}%</span></div>
           <div class="vs" id="vs">VS</div>
-          <div class="side" id="side-r"><small>BL · BILL OF LADING</small><b>${esc(R.raw_value)}</b><span class="conf ${R.confidence < 0.75 ? "low" : ""}"><i style="--p:${R.confidence}"></i>${Math.round(R.confidence * 100)}%</span></div>
+          <div class="side" id="side-r"><small>BL · Bill of lading</small><b>${renderDiff(dr)}${rShow.locode ? ` <span class="locode">${esc(rShow.locode)}</span>` : ""}</b><span class="conf ${R.confidence < 0.75 ? "low" : ""}"><i style="--p:${R.confidence}"></i>${Math.round(R.confidence * 100)}%</span></div>
         </div>
       </div>
 

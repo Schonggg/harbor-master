@@ -48,13 +48,41 @@ _FIELD_PATTERNS: dict[str, re.Pattern[str]] = {
 
 _LINE_RE = re.compile(r"^([^:\n]{2,40})[:\-]\s*(.+)$")
 _POL_POD_PREFIX = re.compile(r"^\(\s*(?:POL|POD)\s*\)\s*:?\s*", re.I)
+_ROLE_PREFIX = re.compile(
+    r"^(?:notify(?:\s+party)?|consignee|shipper|name|voyage|vessel(?:\s*/\s*voyage)?)\s*:\s*",
+    re.I,
+)
+_VOYAGE_LINE = re.compile(r"^(?:voyage(?:\s*(?:no\.?|number))?|voy\.?)\s*:?\s*(.+)$", re.I)
+_HAS_VOYAGE = re.compile(r"(?:\bV\.\w+|\s/\s*\S+$)", re.I)
 
 
-def _clean_extracted(name: str, raw: str) -> str:
-    text = (raw or "").strip()
+def _clean_extracted(name: str, raw: str, text: str = "") -> str:
+    value = (raw or "").strip()
     if name in {"port_of_loading", "port_of_discharge"}:
-        text = _POL_POD_PREFIX.sub("", text).strip()
-    return text
+        value = _POL_POD_PREFIX.sub("", value).strip()
+    value = _ROLE_PREFIX.sub("", value).strip()
+    if name == "vessel_voyage":
+        value = _attach_voyage(text, value)
+    return value
+
+
+def _attach_voyage(text: str, raw: str) -> str:
+    value = (raw or "").strip()
+    if not value or _HAS_VOYAGE.search(value):
+        return value
+    lines = [ln.strip() for ln in (text or "").splitlines() if ln.strip()]
+    for i, line in enumerate(lines):
+        if value not in line:
+            continue
+        if i + 1 >= len(lines):
+            break
+        hit = _VOYAGE_LINE.match(lines[i + 1])
+        if hit:
+            voy = hit.group(1).strip()
+            if voy and voy.upper() not in value.upper():
+                return f"{value} {voy}"
+        break
+    return value
 
 
 class FieldExtractor:
@@ -117,11 +145,11 @@ class FieldExtractor:
             match = pattern.search(text)
             if not match:
                 continue
-            raw = _clean_extracted(name, match.group(1) or "")
+            raw = _clean_extracted(name, match.group(1) or "", text)
             if not raw:
                 continue
             raw = raw.splitlines()[0].strip()
-            raw = _clean_extracted(name, raw)
+            raw = _clean_extracted(name, raw, text)
             if not raw:
                 continue
             out[name] = FieldValue(
@@ -144,7 +172,7 @@ class FieldExtractor:
         out: dict[str, FieldValue] = {}
 
         def _put(canonical: str, raw: str) -> None:
-            raw = _clean_extracted(canonical, raw)
+            raw = _clean_extracted(canonical, raw, text)
             if not raw:
                 return
             out.setdefault(
@@ -194,7 +222,7 @@ class FieldExtractor:
             out: dict[str, FieldValue] = {}
             for item in data.get("fields", []):
                 name = canonical_field_name(str(item.get("name", "")))
-                raw = str(item.get("raw_value") or "").strip()
+                raw = _clean_extracted(name, str(item.get("raw_value") or "").strip(), text)
                 if not name or not raw:
                     continue
                 evidence = item.get("evidence") or {}

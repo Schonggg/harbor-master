@@ -103,11 +103,19 @@ def _board_payload(payload: dict) -> dict:
             }
         if _field_lockable(fv):
             lockable = True
+        left_val = fv.get("left_value")
+        right_val = fv.get("right_value")
+        if not left_val and slim:
+            left_val = (slim.get("left") or {}).get("raw_value")
+        if not right_val and slim:
+            right_val = (slim.get("right") or {}).get("raw_value")
         fields.append(
             {
                 "field": fv.get("field"),
                 "state": fv.get("state"),
                 "charge": slim,
+                "left_value": left_val,
+                "right_value": right_val,
                 "winning_strategy": fv.get("winning_strategy"),
                 "rationale": (fv.get("rationale") or "")[:120],
                 "risk_level": fv.get("risk_level"),

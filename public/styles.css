@@ -1178,7 +1178,46 @@ select.ctl, input.ctl {
 .fname b { font-weight: 600; }
 .fname small { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text-3); letter-spacing: 0.06em; }
 .fval { font-family: var(--font-mono); font-size: 0.9rem; word-break: break-word; }
-.fval.none { color: var(--text-3); font-style: italic; }
+.fval.none { color: var(--text-3); }
+.cmp-lead {
+  color: var(--text-2);
+  font-size: 0.88rem;
+  margin: 0 0 0.85rem;
+  max-width: 62ch;
+}
+.cmp-bad { color: var(--hold); }
+.frow.s-MATCH { background: rgba(255, 255, 255, 0.018); }
+.frow.s-MISMATCH {
+  border-color: color-mix(in srgb, var(--hold) 58%, var(--line));
+  background: color-mix(in srgb, var(--hold) 11%, transparent);
+  box-shadow: inset 3px 0 0 var(--hold);
+}
+.frow.s-UNCERTAIN {
+  border-color: color-mix(in srgb, var(--pilot) 50%, var(--line));
+  background: color-mix(in srgb, var(--pilot) 9%, transparent);
+}
+.frow.s-MATCH .fval { color: var(--text-2); }
+.frow.s-MISMATCH .fval { color: var(--text); font-weight: 550; }
+.fval mark {
+  background: color-mix(in srgb, var(--hold) 42%, transparent);
+  color: var(--text);
+  padding: 0 0.08em;
+  border-radius: 2px;
+}
+.locode {
+  display: inline-block;
+  margin-left: 0.4rem;
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  color: var(--text-3);
+  border: 1px solid var(--line);
+  padding: 0.08rem 0.4rem;
+  border-radius: 999px;
+  font-style: normal;
+  font-weight: 500;
+  vertical-align: 0.12em;
+  white-space: nowrap;
+}
 .fstate {
   display: inline-flex;
   align-items: center;
@@ -2122,7 +2161,20 @@ input[type="range"].dial::-moz-range-thumb {
   .court-rail { position: static; }
   .frow { grid-template-columns: 1fr 1fr; }
   .frow.head { display: none; }
+  .frow .fname { grid-column: 1 / -1; }
+  .frow .fstate { grid-column: 1 / -1; }
   .frow .fmore { grid-column: 1 / -1; }
+  .fval[data-fill^="si"]::before,
+  .fval[data-fill^="bl"]::before {
+    display: block;
+    font-size: 0.64rem;
+    letter-spacing: 0.12em;
+    color: var(--text-3);
+    margin-bottom: 0.2rem;
+    font-weight: 500;
+  }
+  .fval[data-fill^="si"]::before { content: "SI"; }
+  .fval[data-fill^="bl"]::before { content: "BL"; }
   .versus { grid-template-columns: 1fr; }
   .versus .vs { justify-self: center; }
   .evidence-split { grid-template-columns: 1fr; }

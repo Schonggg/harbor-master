@@ -77,7 +77,7 @@ export function scoutZh(label) {
 }
 
 export const VERDICT = {
-  CLEAR: { zh: "Release", desc: "All seven fields match or a defence held" },
+  CLEAR: { zh: "Release", desc: "The seven fields match, or a defence held" },
   HOLD: { zh: "Hold", desc: "A real discrepancy no defence could absorb" },
   PILOT: { zh: "Pilot", desc: "Evidence is thin or the run failed. Hand to a human." },
 };

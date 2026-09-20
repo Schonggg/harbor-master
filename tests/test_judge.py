@@ -27,6 +27,18 @@ def test_match_via_strategy():
     right = ExtractedDocument(fields={"consignee": _fv("consignee", "ACME INC")})
     verdicts, _ = Judge().try_case(left, right, case_id="t1")
     assert verdicts[0].state == CourtState.MATCH
+    assert verdicts[0].left_value == "ACME CO., LTD."
+    assert verdicts[0].right_value == "ACME INC"
+
+
+def test_raw_equality_keeps_both_writings():
+    left = ExtractedDocument(fields={"shipper": _fv("shipper", "ACME TRADING")})
+    right = ExtractedDocument(fields={"shipper": _fv("shipper", "ACME TRADING")})
+    verdicts, _ = Judge().try_case(left, right, case_id="t-eq")
+    assert verdicts[0].state == CourtState.MATCH
+    assert verdicts[0].charge is None
+    assert verdicts[0].left_value == "ACME TRADING"
+    assert verdicts[0].right_value == "ACME TRADING"
 
 
 def test_mismatch_when_confident_and_undefended():

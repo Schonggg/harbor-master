@@ -346,6 +346,8 @@ class FieldVerdict(BaseModel):
     risk_level: RiskLevel = RiskLevel.LOW
     exposure_usd: float = 0.0
     advise: str = ""
+    left_value: str | None = None
+    right_value: str | None = None
 
 
 class TranscriptEvent(BaseModel):

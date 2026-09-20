@@ -1,10 +1,11 @@
 // Case drawer: verdict hero, seven-field comparison, evidence with in-place
 // highlighting of the original message, and hand-offs to court / pilot.
-import { store as bridgeStore } from "../lib/store.js?v=53";
+import { store as bridgeStore } from "../lib/store.js?v=54";
 import { esc, $, $$, on, shortId, fmtUsd, diffChars, renderDiff, reEscape, sourceWaitHtml } from "../lib/dom.js";
 import { enter } from "../lib/motion.js";
 import { fieldZh, fieldEn, scoutZh, VERDICT, STATE, RISK, strategyZh, failureZh } from "../lib/copy.js";
-import { card, orderedFields, ledgerRef, confidenceOf, pilotReasons } from "../lib/case.js";
+import { card, sevenFields, extraFields, orderedFields, ledgerRef, confidenceOf, pilotReasons } from "../lib/case.js?v=54";
+import { pairWritings, present, effectiveState, valueFromBody } from "../lib/field-display.js?v=54";
 
 export function renderDetail(root, runId, ctx) {
   const store = ctx.store || bridgeStore;
@@ -15,9 +16,13 @@ export function renderDetail(root, runId, ctx) {
   }
   const c = card(run);
   const v = c.verdict || run.verdict;
-  const fields = orderedFields(run);
-  const charged = fields.filter((f) => f.charge);
+  const fields = sevenFields(run);
+  const extras = extraFields(run);
+  const charged = fields.filter((f) => f.charge && effectiveState(f) !== "MATCH");
   const reasons = v === "PILOT" ? pilotReasons(run) : [];
+  const disagree = fields.filter((f) => effectiveState(f) === "MISMATCH").length;
+  const grey = fields.filter((f) => effectiveState(f) === "UNCERTAIN").length;
+  const agree = fields.length - disagree - grey;
 
   root.innerHTML = `
     <div class="drawer-inner v-${v}" data-run="${esc(run.run_id)}">
@@ -44,12 +49,21 @@ export function renderDetail(root, runId, ctx) {
       </header>
 
       <section>
-        <div class="section-title"><h3>Seven-field compare</h3><small>SI · BL · STATE</small></div>
+        <div class="section-title">
+          <h3>Seven-field compare</h3>
+          <small>${fields.length ? `${disagree ? `<b class="cmp-bad">${disagree} mismatch</b> · ` : ""}${agree} match${grey ? ` · ${grey} review` : ""}` : "SI · BL · STATE"}</small>
+        </div>
         ${fields.length ? `
+        <p class="cmp-lead">${disagree ? "Mismatches are highlighted. Read SI versus BL on one row." : "These seven fields agree. SI and BL write the same fact."}</p>
         <div class="ftable">
-          <div class="frow head"><span>Field</span><span>SI shipping instruction</span><span>BL bill of lading</span><span>State</span><span></span></div>
+          <div class="frow head"><span>Field</span><span>Shipping instruction (SI)</span><span>Bill of lading (BL)</span><span>State</span><span></span></div>
           ${fields.map((fv) => frow(fv, store)).join("")}
         </div>` : `<div class="empty"><p>This mail is not an SI/BL check, so there are no fields to compare. Scout labelled it “${esc(scoutZh(c.scout?.label))}” and filed it.</p></div>`}
+        ${extras.length ? `
+        <div class="section-title" style="margin-top:1.2rem"><h3>Also on the documents</h3><small>NOT IN THE SEVEN</small></div>
+        <div class="ftable extra-ftable">
+          ${extras.map((fv) => frow(fv, store)).join("")}
+        </div>` : ""}
       </section>
 
       <section id="source">
@@ -101,82 +115,94 @@ export function renderDetail(root, runId, ctx) {
 
   loadSource(store, run, $("#source-text", root)).then((email) => {
     if (!email) return;
-    for (const cell of $$(".fval.none[data-fill]", root)) {
+    for (const cell of $$(".fval[data-fill]", root)) {
       const [side, field] = cell.dataset.fill.split(":");
+      if (cell.dataset.filled === "1") continue;
       const val = valueFromBody(email.body_text || "", side, field);
-      if (val) { cell.textContent = val; cell.classList.remove("none"); }
+      if (!val) continue;
+      const shown = present(field, val);
+      cell.innerHTML = fvalHtml(shown, null);
+      cell.classList.remove("none");
+      cell.dataset.filled = "1";
+      const row = cell.closest(".frow");
+      if (row?.dataset.state === "MATCH") {
+        const otherSide = side === "si" ? "bl" : "si";
+        const other = row.querySelector(`.fval[data-fill="${otherSide}:${field}"]`);
+        if (other && other.dataset.filled !== "1") {
+          other.innerHTML = fvalHtml(shown, null);
+          other.classList.remove("none");
+          other.dataset.filled = "1";
+        }
+      }
     }
   });
 }
 
-const LABELS = {
-  shipper: /^shipper\b/i,
-  consignee: /^consignee\b/i,
-  notify_party: /^notify(?: party)?\b/i,
-  port_of_loading: /^(?:port of loading|load(?:ing)? port|pol)\b/i,
-  port_of_discharge: /^(?:port of discharge|discharge port|pod)\b/i,
-  container_count: /^container(?:s| count| qty)?\b/i,
-  gross_weight: /^(?:gross )?weight\b/i,
-  vessel_voyage: /^vessel(?:\s*\/\s*voyage)?\b/i,
-};
-
-/** Pull "Label: value" for a field out of the SI or BL section of the body. */
-function valueFromBody(body, side, field) {
-  const re = LABELS[field];
-  if (!re) return "";
-  const siIdx = body.search(/=== SHIPPING INSTRUCTION/i);
-  const blIdx = body.search(/=== BILL OF LADING/i);
-  let section = body;
-  if (siIdx >= 0 && blIdx >= 0) section = side === "si" ? body.slice(siIdx, blIdx) : body.slice(blIdx);
-  for (const line of section.split(/\r?\n/)) {
-    const m = /^\s*([^:：]{2,40})[:：]\s*(.+)$/.exec(line);
-    if (m && re.test(m[1].trim())) return m[2].trim();
-  }
-  return "";
-}
-
 function frow(fv, store) {
-  const l = fv.charge?.left;
-  const r = fv.charge?.right;
+  const pair = pairWritings(fv);
+  const state = effectiveState(fv, pair.si, pair.bl);
+  const L = present(fv.field, pair.si);
+  const R = present(fv.field, pair.bl);
   const ref = ledgerRef(fv);
   const rule = ref ? store?.ruleById?.(ref.ruleId) : null;
   const hasDetail = !!fv.charge;
+  const contested = hasDetail && state !== "MATCH";
+  let leftHtml;
+  let rightHtml;
+  if (state === "MISMATCH" && pair.si && pair.bl) {
+    const [dl, dr] = diffChars(L.text || pair.si, R.text || pair.bl);
+    leftHtml = fvalHtml(L, dl);
+    rightHtml = fvalHtml(R, dr);
+  } else {
+    leftHtml = fvalHtml(L, null);
+    rightHtml = fvalHtml(R, null);
+  }
   return `
-    <div class="frow s-${fv.state}" data-field="${esc(fv.field)}">
-      <div class="fname"><b>${esc(fieldZh(fv.field))}</b><small>${esc(fieldEn(fv.field)).toUpperCase()} · ${esc(RISK[fv.risk_level] || fv.risk_level)} risk</small></div>
-      <div class="fval ${l ? "" : "none"}" data-fill="si:${esc(fv.field)}">${l ? esc(l.raw_value) : "character match"}</div>
-      <div class="fval ${r ? "" : "none"}" data-fill="bl:${esc(fv.field)}">${r ? esc(r.raw_value) : "character match"}</div>
-      <div class="fstate">${STATE[fv.state] || fv.state}${ref ? `<span class="chip signal" title="From a ledger rule">rule</span>` : ""}</div>
+    <div class="frow s-${state}" data-field="${esc(fv.field)}" data-state="${esc(state)}">
+      <div class="fname"><b>${esc(fieldZh(fv.field))}</b><small>${esc(fieldEn(fv.field))} · ${esc(RISK[fv.risk_level] || fv.risk_level)} risk</small></div>
+      <div class="fval ${L.empty ? "none" : ""}" data-fill="si:${esc(fv.field)}" ${L.empty ? "" : `data-filled="1"`}>${L.empty ? "—" : leftHtml}</div>
+      <div class="fval ${R.empty ? "none" : ""}" data-fill="bl:${esc(fv.field)}" ${R.empty ? "" : `data-filled="1"`}>${R.empty ? "—" : rightHtml}</div>
+      <div class="fstate">${STATE[state] || state}${ref ? `<span class="chip signal" title="From a ledger rule">rule</span>` : ""}</div>
       <div class="fmore">
-        ${hasDetail ? `<button type="button" class="btn btn-sm" data-toggle>Evidence</button><button type="button" class="btn btn-sm" data-field-court="${esc(fv.field)}">Court</button>` : ""}
+        ${hasDetail ? `<button type="button" class="btn btn-sm" data-toggle>Evidence</button>` : ""}
+        ${contested ? `<button type="button" class="btn btn-sm" data-field-court="${esc(fv.field)}">Court</button>` : ""}
       </div>
     </div>
     ${hasDetail ? `<div class="fdetail" hidden>${fdetail(fv, ref, rule)}</div>` : ""}`;
 }
 
+function fvalHtml(shown, diffParts) {
+  const body = diffParts ? renderDiff(diffParts) : esc(shown.text);
+  const code = shown.locode ? `<span class="locode">${esc(shown.locode)}</span>` : "";
+  return `${body}${code}`;
+}
+
 function fdetail(fv, ref, rule) {
   const l = fv.charge.left;
   const r = fv.charge.right;
-  const [dl, dr] = diffChars(l.raw_value, r.raw_value);
+  const lShow = present(fv.field, l.raw_value);
+  const rShow = present(fv.field, r.raw_value);
+  const [dl, dr] = diffChars(lShow.text || l.raw_value, rShow.text || r.raw_value);
   const pleas = fv.pleas || [];
   const conf = confidenceOf(fv);
   return `
     ${ref ? `<div class="rule-src">${ref.replayed ? "Replay" : "Hit"} ledger rule <code>#${shortId(ref.ruleId)}</code> · ${rule ? `locked by ${esc(rule.created_by)} on case #${shortId(rule.source_case_id)}: “${esc(rule.left_pattern)}”${rule.decision === "accept_as_match" ? "≡" : "≠"}“${esc(rule.right_pattern)}”` : "locked by an earlier pilot ruling"}</div>` : ""}
     <p class="rationale">${rationaleZh(fv)}${pleas.length ? ` · defence ${pleas.filter((p) => p.accepted).length}/${pleas.length} held: ${pleas.map((p) => `${strategyZh(p.strategy)}${p.accepted ? " ✓" : " ✗"}`).join(", ")}` : ""}${conf != null ? ` · extract confidence ${Math.round(conf * 100)}%` : ""}</p>
     <div class="evidence-split">
-      ${pane("SI", l, dl, 0)}
-      ${pane("BL", r, dr, 1)}
+      ${pane("SI", l, dl, 0, lShow)}
+      ${pane("BL", r, dr, 1, rShow)}
     </div>`;
 }
 
-function pane(side, fvv, diff, idx) {
+function pane(side, fvv, diff, idx, shown) {
   const ev = fvv.evidence || {};
   const conf = fvv.confidence ?? 0.5;
   const bbox = ev.bbox;
+  const code = shown?.locode ? `<span class="locode">${esc(shown.locode)}</span>` : "";
   return `
     <div class="evidence-pane">
-      <div class="label">${side} · ${esc(fieldEn(fvv.name)).toUpperCase()}</div>
-      <div class="val">${renderDiff(diff)}</div>
+      <div class="label">${side} · ${esc(fieldEn(fvv.name))}</div>
+      <div class="val">${renderDiff(diff)}${code}</div>
       <div class="src">
         <span class="chip">${esc(sourceZh(ev.source))}</span>
         ${ev.attachment_name ? `<span class="chip mono">${esc(ev.attachment_name)}</span>` : ""}
@@ -200,12 +226,12 @@ function sourceZh(src) {
 
 export function rationaleZh(fv) {
   const r = fv.rationale || "";
-  if (r === "raw equality") return "Character-for-character match";
-  if (r.startsWith("defended by ")) return `Defence “${strategyZh(r.slice(12))}” held — treated as a match`;
+  if (r === "raw equality") return "Both sides write the same value";
+  if (r.startsWith("defended by ")) return `Defence “${strategyZh(r.slice(12))}” held. Treated as a match`;
   if (r.startsWith("ledger replay:")) return "Rewritten by a ledger-rule replay";
   if (r.startsWith("ledger:")) return "Hit a ledger rule and ruled directly";
-  if (r.startsWith("all strategies failed")) return "Every defence failed — confirmed discrepancy";
-  if (r.startsWith("confidence or evidence")) return "Confidence or evidence too thin to hold — handed to a human";
+  if (r.startsWith("all strategies failed")) return "Every defence failed. Confirmed discrepancy";
+  if (r.startsWith("confidence or evidence")) return "Confidence or evidence too thin to hold. Handed to a human";
   return esc(r);
 }
 

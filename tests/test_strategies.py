@@ -64,6 +64,24 @@ def test_locode_map_negative():
     assert not plea.accepted
 
 
+def test_locode_map_parenthetical_code():
+    plea = LocodeMapStrategy().try_defend(
+        _charge("port_of_loading", "SINGAPORE", "SINGAPORE (SGSIN)")
+    )
+    assert plea.accepted
+
+
+def test_locode_map_unknown_port_keeps_same_name():
+    plea = LocodeMapStrategy().try_defend(
+        _charge(
+            "port_of_discharge",
+            "PYEONGTAEK, SOUTH KOREA",
+            "PYEONGTAEK, SOUTH KOREA (KRPTK)",
+        )
+    )
+    assert plea.accepted
+
+
 def test_unit_convert():
     plea = UnitConvertStrategy().try_defend(
         _charge("gross_weight_kg", "1 MT", "1000 KGS")

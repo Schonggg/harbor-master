@@ -79,6 +79,7 @@ gross_weight:
 vessel_voyage:
   - vessel
   - vessel / voyage
+  - vessel name
   - ocean vessel
   - voyage no
   - voy

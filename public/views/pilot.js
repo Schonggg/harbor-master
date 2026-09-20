@@ -1,10 +1,11 @@
 // ③ Pilot deck — the human in the loop. One decision becomes a ledger rule, the
 // ledger replays history, and the queue visibly collapses.
-import { store as bridgeStore } from "../lib/store.js?v=53";
+import { store as bridgeStore } from "../lib/store.js?v=54";
 import { esc, $, $$, on, shortId, diffChars, renderDiff, fmtUsd, sourceWaitHtml } from "../lib/dom.js";
 import { gsap, reduced, enter, countTo, collapseOut, pulse } from "../lib/motion.js";
 import { fieldZh, fieldEn, RISK, failureZh } from "../lib/copy.js";
-import { card, orderedFields, pilotReasons, ledgerRef, confidenceOf } from "../lib/case.js?v=12";
+import { card, orderedFields, pilotReasons, ledgerRef, confidenceOf } from "../lib/case.js?v=54";
+import { effectiveState, present } from "../lib/field-display.js?v=54";
 
 export function mount(root, ctx, params = {}) {
   const store = ctx.store || bridgeStore;
@@ -74,6 +75,7 @@ export function mount(root, ctx, params = {}) {
   function lockableFields(run) {
     return orderedFields(run).filter((f) => (
       (f.state === "UNCERTAIN" || f.state === "MISMATCH")
+      && effectiveState(f) !== "MATCH"
       && hasWriting(f.charge?.left)
       && hasWriting(f.charge?.right)
     ));
@@ -322,7 +324,9 @@ export function mount(root, ctx, params = {}) {
   function decideBlock(fv) {
     const L = fv.charge.left;
     const R = fv.charge.right;
-    const [dl, dr] = diffChars(L.raw_value, R.raw_value);
+    const lShow = present(fv.field, L.raw_value);
+    const rShow = present(fv.field, R.raw_value);
+    const [dl, dr] = diffChars(lShow.text || L.raw_value, rShow.text || R.raw_value);
     const conf = confidenceOf(fv);
     const similar = store.s.runs.filter((r) => r.run_id !== runId && orderedFields(r).some((f) => f.field === fv.field && f.charge && sameKey(f.charge, fv.charge)));
     return `

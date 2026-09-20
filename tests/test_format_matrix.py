@@ -24,6 +24,34 @@ def test_every_near_miss_still_fires():
         assert not values_match(field, GOLD[field], other), field
 
 
+def test_notify_prefix_is_equivalent_writing():
+    assert values_match("consignee", GOLD["consignee"], f"Notify: {GOLD['consignee']}")
+    assert would_false_alarm("consignee", GOLD["consignee"], f"Notify: {GOLD['consignee']}") is False
+    assert not values_match("consignee", GOLD["consignee"], f"Notify: {NEAR_MISS['consignee']}")
+
+
+def test_port_unloc_parentheses_are_equivalent():
+    assert values_match("port_of_loading", "SINGAPORE", "Singapore (SGSIN)")
+    assert values_match("port_of_discharge", "PYEONGTAEK, SOUTH KOREA", "PYEONGTAEK, SOUTH KOREA (KRPTK)")
+    assert not values_match("port_of_loading", "SINGAPORE", "ROTTERDAM (NLRTM)")
+
+
+def test_extractor_strips_role_labels():
+    text = (
+        "Consignee: Notify: CLIFFORD PAPER INC\n"
+        "Vessel Name: Name: VISION 202\n"
+        "Voyage: V.002\n"
+        "Port of Loading: SINGAPORE (SGSIN)\n"
+    )
+    doc = FieldExtractor(degrade=True, rules_only=True).extract_text(text)
+    assert "NOTIFY" not in doc.fields["consignee"].raw_value.upper()
+    assert "CLIFFORD" in doc.fields["consignee"].raw_value.upper()
+    vessel = doc.fields["vessel_voyage"].raw_value.upper()
+    assert not vessel.startswith("NAME:")
+    assert "VISION 202" in vessel
+    assert "V.002" in vessel
+
+
 def test_false_alarm_report_is_zero():
     rows = false_alarm_pairs()
     assert rows
