@@ -5,7 +5,7 @@ import { store as bridgeStore } from "../lib/store.js?v=54";
 import { esc, $, $$, on, shortId, fmtUsd, diffChars, renderDiff } from "../lib/dom.js";
 import { gsap, reduced, enter } from "../lib/motion.js";
 import { fieldZh, fieldEn, strategyZh, STRATEGIES, RISK } from "../lib/copy.js";
-import { card, courtFields, confidenceOf, ledgerRef } from "../lib/case.js?v=54";
+import { card, courtFields, orderedFields, confidenceOf, ledgerRef } from "../lib/case.js?v=54";
 import { present } from "../lib/field-display.js?v=54";
 
 const STRATEGY_ORDER = Object.keys(STRATEGIES).filter((k) => k !== "ledger");
@@ -94,7 +94,7 @@ export function mount(root, ctx, params = {}) {
       return `<button type="button" class="case-item v-${c.verdict} ${r.run_id === runId ? "on" : ""}" data-run="${esc(r.run_id)}"><i></i><span><span>${esc(c.subject || r.email_id)}</span><small>${c.verdict} · #${shortId(r.run_id)} · ${courtFields(r).length} charges</small></span></button>`;
     }).join("") : `<p class="muted" style="font-size:.85rem">No disputed cases yet. Load the official inbox on the Board first.</p>`;
     const run = store.runById(runId);
-    const all = run ? (card(run).field_verdicts || []) : [];
+    const all = run ? orderedFields(run) : [];
     const cf = run ? courtFields(run) : [];
     fieldTabs.innerHTML = run ? all.map((f) => {
       const inCourt = cf.includes(f);

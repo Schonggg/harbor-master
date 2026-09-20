@@ -187,7 +187,7 @@ function fdetail(fv, ref, rule) {
   const conf = confidenceOf(fv);
   return `
     ${ref ? `<div class="rule-src">${ref.replayed ? "Replay" : "Hit"} ledger rule <code>#${shortId(ref.ruleId)}</code> · ${rule ? `locked by ${esc(rule.created_by)} on case #${shortId(rule.source_case_id)}: “${esc(rule.left_pattern)}”${rule.decision === "accept_as_match" ? "≡" : "≠"}“${esc(rule.right_pattern)}”` : "locked by an earlier pilot ruling"}</div>` : ""}
-    <p class="rationale">${rationaleZh(fv)}${pleas.length ? ` · defence ${pleas.filter((p) => p.accepted).length}/${pleas.length} held: ${pleas.map((p) => `${strategyZh(p.strategy)}${p.accepted ? " ✓" : " ✗"}`).join(", ")}` : ""}${conf != null ? ` · extract confidence ${Math.round(conf * 100)}%` : ""}</p>
+    <p class="rationale">${rationaleZh(fv)}${pleas.length ? ` · defence ${pleas.filter((p) => p.accepted).length}/${pleas.length} held: ${pleas.map((p) => `${strategyZh(p.strategy) || "defence"}${p.accepted ? " ✓" : " ✗"}`).join(", ")}` : ""}${conf != null ? ` · extract confidence ${Math.round(conf * 100)}%` : ""}</p>
     <div class="evidence-split">
       ${pane("SI", l, dl, 0, lShow)}
       ${pane("BL", r, dr, 1, rShow)}
