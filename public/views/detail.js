@@ -160,8 +160,8 @@ function frow(fv, store) {
   return `
     <div class="frow s-${state}" data-field="${esc(fv.field)}" data-state="${esc(state)}">
       <div class="fname"><b>${esc(fieldZh(fv.field))}</b><small>${esc(fieldEn(fv.field))} · ${esc(RISK[fv.risk_level] || fv.risk_level)} risk</small></div>
-      <div class="fval ${L.empty ? "none" : ""}" data-fill="si:${esc(fv.field)}" ${L.empty ? "" : `data-filled="1"`}>${L.empty ? "—" : leftHtml}</div>
-      <div class="fval ${R.empty ? "none" : ""}" data-fill="bl:${esc(fv.field)}" ${R.empty ? "" : `data-filled="1"`}>${R.empty ? "—" : rightHtml}</div>
+      <div class="fval ${L.empty ? "none" : ""}" data-fill="si:${esc(fv.field)}" ${L.empty ? "" : `data-filled="1"`}>${L.empty ? (state === "MATCH" ? "Agree" : "—") : leftHtml}</div>
+      <div class="fval ${R.empty ? "none" : ""}" data-fill="bl:${esc(fv.field)}" ${R.empty ? "" : `data-filled="1"`}>${R.empty ? (state === "MATCH" ? "Agree" : "—") : rightHtml}</div>
       <div class="fstate">${STATE[state] || state}${ref ? `<span class="chip signal" title="From a ledger rule">rule</span>` : ""}</div>
       <div class="fmore">
         ${hasDetail ? `<button type="button" class="btn btn-sm" data-toggle>Evidence</button>` : ""}

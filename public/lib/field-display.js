@@ -135,14 +135,19 @@ function locodeOf(raw) {
 function titleCase(raw) {
   const text = String(raw || "").replace(/\s+/g, " ").trim();
   if (!text) return "";
+  const letters = text.replace(/[^A-Za-z]/g, "");
+  const allCaps = letters.length > 2 && letters === letters.toUpperCase();
+  if (!allCaps) return text;
   return text
     .toLowerCase()
     .split(" ")
     .map((word) => {
       if (!word) return word;
+      const core = word.replace(/[().,]/g, "");
       if (/^\d/.test(word)) return word.toUpperCase();
-      if (["pte", "ltd", "llc", "inc", "gmbh", "sdn", "bhd", "co", "fze"].includes(word)) {
-        return word.toUpperCase();
+      if (core.length <= 2) return word.toUpperCase();
+      if (["pte", "ltd", "llc", "inc", "gmbh", "sdn", "bhd", "co", "fze", "fz", "uab"].includes(core)) {
+        return word.replace(core, core.toUpperCase());
       }
       return word.charAt(0).toUpperCase() + word.slice(1);
     })
