@@ -1,12 +1,12 @@
 // ② Court — prosecutor files a charge, the defender tries each deterministic
 // strategy one by one, the judge rules. A GSAP timeline gives it courtroom
 // pacing: slow enough to read, fast enough to keep the room.
-import { store as bridgeStore } from "../lib/store.js?v=57";
-import { esc, $, $$, on, shortId, fmtUsd, diffChars, renderDiff } from "../lib/dom.js?v=57";
+import { store as bridgeStore } from "../lib/store.js?v=58";
+import { esc, $, $$, on, shortId, fmtUsd, diffChars, renderDiff } from "../lib/dom.js?v=58";
 import { gsap, reduced, enter } from "../lib/motion.js";
 import { fieldZh, fieldEn, strategyZh, STRATEGIES, RISK, STATE } from "../lib/copy.js";
-import { card, courtFields, orderedFields, confidenceOf, ledgerRef } from "../lib/case.js?v=57";
-import { present, effectiveState } from "../lib/field-display.js?v=57";
+import { card, courtFields, orderedFields, confidenceOf, ledgerRef } from "../lib/case.js?v=58";
+import { present, effectiveState } from "../lib/field-display.js?v=58";
 
 const STRATEGY_ORDER = Object.keys(STRATEGIES).filter((k) => k !== "ledger");
 
@@ -25,7 +25,6 @@ export function mount(root, ctx, params = {}) {
   const store = ctx.store || bridgeStore;
   let runId = params.run || null;
   let field = params.field || null;
-  let speed = Number(sessionStorage.getItem("hm.courtSpeed") || 1);
   let tl = null;
 
   root.innerHTML = `
@@ -58,7 +57,6 @@ export function mount(root, ctx, params = {}) {
   on(caseList, "click", ".case-item", (_, el) => { runId = el.dataset.run; field = null; renderAll(true); });
   on(fieldTabs, "click", ".field-tab:not(.quiet)", (_, el) => { field = el.dataset.field; renderAll(true); });
   on(stage, "click", "[data-replay]", () => play());
-  on(stage, "click", "[data-speed]", (_, el) => { speed = Number(el.dataset.speed); sessionStorage.setItem("hm.courtSpeed", String(speed)); $$("[data-speed]", stage).forEach((b) => b.classList.toggle("on", b === el)); if (tl) tl.timeScale(speed); });
   on(stage, "click", "[data-next]", (_, el) => { field = el.dataset.next; renderAll(true); });
   on(stage, "click", "[data-pilot]", (_, el) => ctx.navigate("pilot", { run: runId, field: el.dataset.pilot }));
   on(stage, "click", "[data-detail]", () => ctx.openDetail(runId));
@@ -131,9 +129,6 @@ export function mount(root, ctx, params = {}) {
       <div class="court-progress"><i id="progress"></i></div>
       <div class="court-controls">
         <span class="muted" style="margin-right:auto;font-size:.8rem">#${shortId(run.run_id)} · ${esc(c.subject || run.email_id)} · ${idx + 1} of ${cf.length}</span>
-        <div class="seg" aria-label="Playback speed">
-          ${[0.5, 1, 2].map((s) => `<button type="button" data-speed="${s}" class="${s === speed ? "on" : ""}">${s}×</button>`).join("")}
-        </div>
         <button type="button" class="btn btn-sm" data-replay>Replay <kbd style="opacity:.6;margin-left:.3rem">R</kbd></button>
         <button type="button" class="btn btn-sm" data-detail>Case detail</button>
       </div>
@@ -237,7 +232,6 @@ export function mount(root, ctx, params = {}) {
       defaults: { ease: "power3.out" },
       onUpdate: () => gsap.set(progress, { scaleX: tl.progress() }),
     });
-    tl.timeScale(speed);
     tl.fromTo("#charge .who", { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.4 })
       .fromTo("#charge .charge-line", { opacity: 0, y: 14, filter: "blur(6px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.8 }, "-=0.15")
       .fromTo("#side-l", { opacity: 0, x: -40 }, { opacity: 1, x: 0, duration: 0.6 }, "-=0.35")

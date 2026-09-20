@@ -440,6 +440,13 @@ class Store extends EventTarget {
     }, 3000);
   }
 
+  async resetChaos() {
+    if (this.live) {
+      await request("/api/chaos/reset", { method: "POST", timeout: 45000 });
+    }
+    return this.reset();
+  }
+
   async reset() {
     return this.withBusy(async () => {
       if (this.live) {
@@ -625,9 +632,7 @@ class Store extends EventTarget {
     return this.withBusy(async () => {
       let payload;
       if (this.live) {
-        // Smash a clean SI-vs-BL case so the audience sees a known-good email break honestly.
-        const target = this.state.runs.find((r) => r.verdict === "CLEAR" && (r.payload?.card?.field_verdicts || []).length)?.email_id || "demo_si_vs_bl";
-        payload = await request(`/api/chaos/${encodeURIComponent(type)}`, { method: "POST", body: { email_id: target }, timeout: 180000 });
+        payload = await request(`/api/chaos/${encodeURIComponent(type)}`, { method: "POST", body: {}, timeout: 20000 });
         await this.refresh();
       } else {
         payload = clone(DEMO_CHAOS[type]);

@@ -279,6 +279,22 @@ class LedgerStore:
                 n += int(getattr(cur, "rowcount", 0) or 0)
         return n
 
+    def purge_email_prefix(self, prefix: str) -> int:
+        """Drop smash / fixture rows by email_id prefix. Official SDOC ids are never this shape."""
+        token = str(prefix or "").strip()
+        if not token or token in {"%", "_", "email_"}:
+            return 0
+        like = f"{token}%"
+        n = 0
+        with self._connect() as conn:
+            for sql in (
+                "DELETE FROM case_runs WHERE email_id LIKE ?",
+                "DELETE FROM email_verdicts WHERE email_id LIKE ?",
+            ):
+                cur = conn.execute(sql, (like,))
+                n += int(getattr(cur, "rowcount", 0) or 0)
+        return n
+
     def list_runs(self) -> list[dict]:
         with self._connect() as conn:
             sql = "SELECT run_id, case_id, email_id, verdict, payload_json, created_at FROM case_runs"

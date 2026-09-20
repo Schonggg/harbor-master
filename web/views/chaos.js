@@ -1,11 +1,11 @@
 // ⑤ Chaos — four red buttons. The point is not that the system survives; it is
 // that it raises its hand honestly: detect → flag → hand to pilot, with a
 // DEGRADED tag whenever the LLM was cut.
-import { store as bridgeStore } from "../lib/store.js?v=57";
-import { esc, $, $$, on, shortId, sleep } from "../lib/dom.js?v=57";
+import { store as bridgeStore } from "../lib/store.js?v=58";
+import { esc, $, $$, on, shortId, sleep } from "../lib/dom.js?v=58";
 import { gsap, reduced, enter, shake, pulse, tiltify } from "../lib/motion.js";
 import { CHAOS, failureZh, VERDICT, scoutZh } from "../lib/copy.js";
-import { pilotReasons } from "../lib/case.js?v=57";
+import { pilotReasons } from "../lib/case.js?v=58";
 
 export function mount(root, ctx) {
   const store = ctx.store || bridgeStore;
@@ -16,7 +16,7 @@ export function mount(root, ctx) {
       <div class="view-head">
         <div>
           <h1>Chaos <small>SMASH THE STAGE</small></h1>
-          <p>Four ways to break a live case. Watch whether the system <b>raises its hand honestly</b> when it detects a fault, instead of inventing an answer. Every button really re-runs the pipeline.</p>
+          <p>Four ways to break a live case. Watch whether the system <b>raises its hand honestly</b> when it detects a fault, instead of inventing an answer. Each smash is a throwaway <code>chaos_*</code> row — rules-only, no LLM wait — so the official 520 stamps stay put.</p>
         </div>
         <div class="view-actions"><button type="button" class="btn btn-outline-hold" id="chaos-reset">Refresh board</button></div>
       </div>
@@ -40,7 +40,7 @@ export function mount(root, ctx) {
         </div>
       </div>
       <div class="chaos-foot">
-        <span class="muted" style="font-size:.85rem">Refresh reloads the official board. Hosted Postgres is never wiped.</span>
+        <span class="muted" style="font-size:.85rem">Refresh board drops smash rows and re-judges any official mail an older smash overwrote. Hosted Postgres is never wiped.</span>
         <span class="muted" style="font-size:.85rem" id="chaos-count"></span>
       </div>
     </section>`;
@@ -56,10 +56,10 @@ export function mount(root, ctx) {
     const b = $("#chaos-reset", root);
     b.disabled = true;
     try {
-      await store.reset();
+      await store.resetChaos();
       ctx.scene.setMood("calm");
       resetSteps();
-      resultEl.innerHTML = `<div class="placeholder"><b>Refreshed</b><span>Official ledger kept. Smash a button to inject a fault on a live case.</span></div>`;
+      resultEl.innerHTML = `<div class="placeholder"><b>Refreshed</b><span>Smash rows dropped. Official 520 stamps kept. Smash a button to inject a fault.</span></div>`;
       ctx.toast("Board refreshed", "ok");
     } catch (e) { ctx.toast(`Reset failed: ${e.message}`, "err"); }
     b.disabled = false;
@@ -115,7 +115,7 @@ export function mount(root, ctx) {
 
     if (err) {
       setStep(1, "alarm", `<span class="chip danger">Request failed: ${esc(err.message)}</span>`);
-      resultEl.innerHTML = `<div class="error-panel"><span>The backend did not answer this smash. <code>${esc(err.message)}</code></span></div>`;
+      resultEl.innerHTML = `<div class="error-panel"><span>Smash did not finish. Hosted functions stop at 60s; this path is now a throwaway rules-only row — try once more. <code>${esc(err.message)}</code></span></div>`;
       $$(".chaos-btn", grid).forEach((b) => { b.disabled = false; });
       running = false;
       return;

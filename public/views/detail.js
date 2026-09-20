@@ -1,11 +1,11 @@
 // Case drawer: verdict hero, seven-field comparison, evidence with in-place
 // highlighting of the original message, and hand-offs to court / pilot.
-import { store as bridgeStore } from "../lib/store.js?v=57";
-import { esc, $, $$, on, shortId, fmtUsd, diffChars, renderDiff, reEscape, sourceWaitHtml } from "../lib/dom.js?v=57";
+import { store as bridgeStore } from "../lib/store.js?v=58";
+import { esc, $, $$, on, shortId, fmtUsd, diffChars, renderDiff, reEscape, sourceWaitHtml } from "../lib/dom.js?v=58";
 import { enter } from "../lib/motion.js";
 import { fieldZh, fieldEn, scoutZh, VERDICT, STATE, RISK, strategyZh, failureZh } from "../lib/copy.js";
-import { card, sevenFields, extraFields, orderedFields, ledgerRef, confidenceOf, pilotReasons } from "../lib/case.js?v=57";
-import { pairView, present, effectiveState, valueFromBody } from "../lib/field-display.js?v=57";
+import { card, sevenFields, extraFields, orderedFields, ledgerRef, confidenceOf, pilotReasons } from "../lib/case.js?v=58";
+import { pairView, present, effectiveState, valueFromBody } from "../lib/field-display.js?v=58";
 
 export function renderDetail(root, runId, ctx) {
   const store = ctx.store || bridgeStore;
@@ -107,14 +107,20 @@ export function renderDetail(root, runId, ctx) {
   });
   on(root, "click", "[data-jump]", (e, el) => {
     e.stopPropagation();
-    const q = el.dataset.jump;
+    const pane = el.closest(".evidence-pane");
+    const val = pane?.querySelector(".val");
+    if (val) {
+      val.classList.add("flash");
+      val.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(() => val.classList.remove("flash"), 1400);
+    }
     const src = $("#source-text", root);
-    const marks = $$("mark", src).filter((m) => m.textContent.trim().toUpperCase() === q.trim().toUpperCase());
-    const target = marks[Number(el.dataset.side || 0)] || marks[0];
-    if (!target) { ctx.toast("That text is not in the body (it may come from attachment OCR)", "warn"); return; }
-    target.scrollIntoView({ behavior: "smooth", block: "center" });
-    target.classList.add("flash");
-    setTimeout(() => target.classList.remove("flash"), 1400);
+    const target = findSourceMark(src, el.dataset.jump, el.dataset.file);
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      target.classList.add("flash");
+      setTimeout(() => target.classList.remove("flash"), 1400);
+    }
   });
 
   loadSource(store, run, $("#source-text", root)).then((email) => {
@@ -222,7 +228,7 @@ function pane(side, fvv, diff, idx, shown) {
         ${ev.attachment_name ? `<span class="chip mono">${esc(ev.attachment_name)}</span>` : ""}
         ${ev.page ? `<span class="chip mono">p.${ev.page}</span>` : ""}
         <span class="conf ${conf < 0.75 ? "low" : ""}"><i style="--p:${conf}"></i>${Math.round(conf * 100)}%</span>
-        <button type="button" class="btn btn-sm" data-jump="${esc(fvv.raw_value)}" data-side="${idx}">Find in source</button>
+        <button type="button" class="btn btn-sm" data-jump="${esc(fvv.raw_value)}" data-file="${esc(ev.attachment_name || "")}" data-side="${idx}">Find in source</button>
       </div>
       ${bbox && (bbox.x1 || bbox.y1) ? `<div class="bbox-doc" title="Attachment bbox"><span class="box" style="left:${pct(bbox.x0)}%;top:${pct(bbox.y0)}%;width:${pct(bbox.x1 - bbox.x0)}%;height:${pct(bbox.y1 - bbox.y0)}%"></span></div>` : ""}
       ${ev.snippet && ev.snippet !== fvv.raw_value ? `<div class="muted" style="font-size:.8rem">…${esc(ev.snippet)}…</div>` : ""}
@@ -283,15 +289,53 @@ async function loadSource(store, run, el) {
   return email;
 }
 
+function fold(s) {
+  return String(s || "").replace(/\s+/g, " ").trim().toUpperCase();
+}
+
+function findSourceMark(src, q, file) {
+  if (!src) return null;
+  const needle = fold(q);
+  const marks = $$("mark", src);
+  const exact = marks.filter((m) => fold(m.textContent) === needle);
+  if (exact.length) return exact[0];
+  const head = needle.slice(0, 24);
+  const fuzzy = marks.find((m) => {
+    const t = fold(m.textContent);
+    return (head && t.includes(head)) || (t && needle.includes(t.slice(0, 24)));
+  });
+  if (fuzzy) return fuzzy;
+  if (file) {
+    const hit = $$("[data-file]", src).find((n) => fold(n.dataset.file) === fold(file));
+    if (hit) return hit;
+  }
+  return src.querySelector("[data-excerpt]");
+}
+
 function paintSource(el, run, email) {
   const fields = orderedFields(run).filter((f) => f.charge);
   const terms = new Map();
+  const excerpts = [];
+  const bodyFold = fold(email.body_text);
   for (const f of fields) {
     const st = effectiveState(f);
     const cls = st === "MISMATCH" ? "" : st === "UNCERTAIN" ? "warn" : "si";
-    for (const side of [f.charge.left, f.charge.right]) {
+    for (const [sideName, side] of [["SI", f.charge.left], ["BL", f.charge.right]]) {
       const val = (side?.raw_value || "").trim();
-      if (val.length >= 2) terms.set(val, cls);
+      if (val.length < 2) continue;
+      terms.set(val, cls);
+      const inBody = bodyFold.includes(fold(val).slice(0, 24));
+      if (inBody) continue;
+      const shown = present(f.field, val);
+      excerpts.push({
+        cls,
+        val,
+        text: shown.text || val,
+        side: sideName,
+        field: f.field,
+        file: side?.evidence?.attachment_name || "",
+        page: side?.evidence?.page || "",
+      });
     }
   }
   let body = esc(email.body_text || "");
@@ -301,8 +345,10 @@ function paintSource(el, run, email) {
     const re = new RegExp(`(${sorted.map((t) => reEscape(esc(t))).join("|")})`, "g");
     body = body.replace(re, (m) => `<mark class="${terms.get(unesc(m)) || ""}">${m}</mark>`);
   }
+  const files = (email.attachment_paths || []).map((p) => p.split(/[\\/]/).pop()).filter(Boolean);
+  const excerptHtml = excerpts.length ? `<div class="src-docs"><div class="hd">=== ATTACHMENTS / EXTRACTS ===</div>${excerpts.map((x) => `<p class="src-excerpt" data-excerpt="1" data-file="${esc(x.file)}"><mark class="${esc(x.cls)}">${esc(x.text)}</mark><span class="muted"> · ${esc(x.side)} ${esc(fieldEn(x.field))}${x.file ? ` · ${esc(x.file)}` : ""}${x.page ? ` p.${esc(x.page)}` : ""}</span></p>`).join("")}</div>` : "";
   el.dataset.filled = "1";
-  el.innerHTML = `<div class="hd">${esc(email.subject || "")}</div><div class="muted" style="font-size:.78rem;margin-bottom:.6rem">${esc(email.from_addr || "")} → ${esc((email.to_addrs || []).join(", "))}${(email.attachment_paths || []).length ? ` · attachments ${email.attachment_paths.map((p) => esc(p.split(/[\\/]/).pop())).join(", ")}` : ""}</div>${body || '<span class="muted">(empty body)</span>'}`;
+  el.innerHTML = `<div class="hd">${esc(email.subject || "")}</div><div class="muted" style="font-size:.78rem;margin-bottom:.6rem">${esc(email.from_addr || "")} → ${esc((email.to_addrs || []).join(", "))}${files.length ? ` · attachments ${files.map(esc).join(", ")}` : ""}</div>${body || '<span class="muted">(empty body)</span>'}${excerptHtml}`;
 }
 
 function unesc(s) {

@@ -497,7 +497,10 @@ body.is-live .shell { opacity: 1; }
 .view { display: block; }
 .mail-card > .btn { justify-self: start; }
 .source-text mark.warn { background: var(--pilot-soft); color: var(--pilot); box-shadow: 0 0 0 1px rgba(243, 195, 79, 0.5); }
-.source-text mark.flash { animation: markflash 1.3s ease-out; }
+.source-text mark.flash,
+.evidence-pane .val.flash { animation: markflash 1.3s ease-out; }
+.source-text .src-docs { margin-top: 1rem; padding-top: 0.7rem; border-top: 1px solid var(--line); }
+.source-text .src-excerpt { margin: 0.35rem 0; }
 @keyframes markflash {
   0% { box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.5); }
   100% { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0); }
