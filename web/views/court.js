@@ -1,12 +1,12 @@
 // ② Court — prosecutor files a charge, the defender tries each deterministic
 // strategy one by one, the judge rules. A GSAP timeline gives it courtroom
 // pacing: slow enough to read, fast enough to keep the room.
-import { store as bridgeStore } from "../lib/store.js?v=59";
-import { esc, $, $$, on, shortId, fmtUsd, diffChars, renderDiff } from "../lib/dom.js?v=59";
+import { store as bridgeStore } from "../lib/store.js?v=60";
+import { esc, $, $$, on, shortId, fmtUsd, diffChars, renderDiff } from "../lib/dom.js?v=60";
 import { gsap, reduced, enter } from "../lib/motion.js";
 import { fieldZh, fieldEn, strategyZh, STRATEGIES, RISK, STATE } from "../lib/copy.js";
-import { card, courtFields, orderedFields, confidenceOf, ledgerRef } from "../lib/case.js?v=59";
-import { present, effectiveState } from "../lib/field-display.js?v=59";
+import { card, courtFields, orderedFields, confidenceOf, ledgerRef } from "../lib/case.js?v=60";
+import { present, effectiveState } from "../lib/field-display.js?v=60";
 
 const STRATEGY_ORDER = Object.keys(STRATEGIES).filter((k) => k !== "ledger");
 

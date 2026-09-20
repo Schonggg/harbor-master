@@ -1,11 +1,11 @@
 // ① Verdict board — Worldwide Hubs: three offices, then the docket.
-import { store as bridgeStore } from "../lib/store.js?v=59";
-import { esc, $, $$, on, shortId } from "../lib/dom.js?v=59";
-import { enter, countTo, magnetize, tiltify, scrollToY } from "../lib/motion.js";
+import { store as bridgeStore } from "../lib/store.js?v=60";
+import { esc, $, $$, on, shortId } from "../lib/dom.js?v=60";
+import { enter, countTo, magnetize, tiltify, scrollToY } from "../lib/motion.js?v=16";
 import { scoutZh, VERDICT, fieldZh } from "../lib/copy.js";
-import { card, orderedFields, summarize, courtFields } from "../lib/case.js?v=59";
-import { highlightText, matchesRun, rankRun } from "../lib/docket-search.js?v=59";
-import { SEVEN_FIELDS, effectiveState } from "../lib/field-display.js?v=59";
+import { card, orderedFields, summarize, courtFields } from "../lib/case.js?v=60";
+import { highlightText, matchesRun, rankRun } from "../lib/docket-search.js?v=60";
+import { SEVEN_FIELDS, effectiveState } from "../lib/field-display.js?v=60";
 
 const HUBS = [
   {
@@ -116,8 +116,8 @@ export function mount(root, ctx) {
           </div>
           <div class="docket-actions">
             <button type="button" class="folder-link" id="folder-toggle" aria-pressed="false">
-              已审阅 <b id="folder-n">0</b>
-              <span class="folder-action" id="folder-action">查看</span>
+              Filed <b id="folder-n">0</b>
+              <span class="folder-action" id="folder-action">View</span>
             </button>
             <button type="button" class="btn" id="board-refresh">Refresh</button>
           </div>
@@ -133,15 +133,15 @@ export function mount(root, ctx) {
         <div class="folder-tools" id="folder-tools">
           <label class="select-visible">
             <input type="checkbox" id="select-visible" />
-            <span>全选当前可见</span>
+            <span>Select visible</span>
           </label>
           <span class="folder-hint">Filed cards leave the open docket. Ledger still teaches pairs on the next run.</span>
         </div>
         <div class="filter-row" id="filters"></div>
         <div id="cards"></div>
         <div class="bulk-bar" id="bulk-bar" hidden>
-          <span class="bulk-count" id="bulk-count">已选 0 项</span>
-          <button type="button" class="btn btn-primary" id="bulk-file">标记为已审阅</button>
+          <span class="bulk-count" id="bulk-count">0 selected</span>
+          <button type="button" class="btn btn-primary" id="bulk-file">File to folder</button>
         </div>
       </div>
     </section>`;
@@ -230,6 +230,7 @@ export function mount(root, ctx) {
   on(cardsEl, "click", "[data-show-filed]", () => setShowFiled(true));
   on(cardsEl, "click", "[data-seed]", () => ctx.seed());
   on(cardsEl, "click", ".card-check", (e) => { e.stopPropagation(); });
+  on(cardsEl, "pointerdown", ".card-check", (e) => { e.stopPropagation(); });
   on(cardsEl, "change", "input[data-pick]", (e, input) => {
     const id = input.dataset.pick;
     if (!id) return;
@@ -264,14 +265,12 @@ export function mount(root, ctx) {
     const ids = [...selected];
     if (!ids.length || bulkFile.disabled) return;
     const next = !ids.every((id) => isEmailFiled(id));
+    ids.forEach((id) => selected.delete(id));
+    syncBulk();
     bulkFile.disabled = true;
     try {
       await store.markReviewed(ids, next);
-      selected.clear();
       ctx.toast(next ? `Filed ${ids.length}` : `Returned ${ids.length} to the docket`, "ok");
-      renderCards(false);
-      syncBulk();
-      renderFolder();
     } catch (err) {
       ctx.toast(err.message || "Could not update the folder", "err");
     } finally {
@@ -302,7 +301,7 @@ export function mount(root, ctx) {
     folderToggle?.setAttribute("aria-pressed", state.showFiled ? "true" : "false");
     folderToggle?.classList.toggle("on", state.showFiled);
     const action = $("#folder-action", root);
-    if (action) action.textContent = state.showFiled ? "收起" : "查看";
+    if (action) action.textContent = state.showFiled ? "Hide" : "View";
     renderCards(true);
     syncBulk();
   }
@@ -311,10 +310,10 @@ export function mount(root, ctx) {
     const ids = [...selected];
     const n = ids.length;
     if (bulkBar) bulkBar.hidden = n === 0;
-    if (bulkCount) bulkCount.textContent = `已选 ${n} 项`;
+    if (bulkCount) bulkCount.textContent = `${n} selected`;
     if (bulkFile) {
       const allFiled = n > 0 && ids.every((id) => isEmailFiled(id));
-      bulkFile.textContent = allFiled ? "取消已审阅" : "标记为已审阅";
+      bulkFile.textContent = allFiled ? "Return to docket" : "File to folder";
     }
     const visible = pickableIds();
     if (selectVisible) {
@@ -334,7 +333,7 @@ export function mount(root, ctx) {
       folderToggle.disabled = n === 0 && !state.showFiled;
     }
     const action = $("#folder-action", root);
-    if (action) action.textContent = state.showFiled ? "收起" : "查看";
+    if (action) action.textContent = state.showFiled ? "Hide" : "View";
   }
 
   function pendingItems() {
@@ -421,7 +420,7 @@ export function mount(root, ctx) {
       const q = state.query.trim();
       const filed = filedCount();
       if (!q && filed && !state.showFiled) {
-        cardsEl.innerHTML = `<div class="empty panel"><h3>Open docket is clear</h3><p>${filed} filed ${filed === 1 ? "card is" : "cards are"} in the folder. They stay filed across reload and a new AI pass.</p><button type="button" class="btn btn-primary" data-show-filed>查看已审阅</button></div>`;
+        cardsEl.innerHTML = `<div class="empty panel"><h3>Open docket is clear</h3><p>${filed} filed ${filed === 1 ? "card is" : "cards are"} in the folder. They stay filed across reload and a new AI pass.</p><button type="button" class="btn btn-primary" data-show-filed>View filed</button></div>`;
         renderHits(0);
         syncBulk();
         return;
@@ -461,7 +460,7 @@ export function mount(root, ctx) {
           </label>
           <div class="row">
             <span class="verdict-tag">${v}<em>${VERDICT[v]?.zh || ""}</em></span>
-            <span class="row-end">${filed ? `<span class="filed-mark">已审阅</span>` : ""}<span class="chip">${esc(scoutZh(label))}${c.scout?.confidence != null ? ` · ${Math.round(c.scout.confidence * 100)}%` : ""}</span></span>
+            <span class="row-end">${filed ? `<span class="filed-mark">Filed</span>` : ""}<span class="chip">${esc(scoutZh(label))}${c.scout?.confidence != null ? ` · ${Math.round(c.scout.confidence * 100)}%` : ""}</span></span>
           </div>
           <h3 title="${esc(c.subject || r.email_id)}">${state.query.trim() ? highlightText(c.subject || r.email_id, state.query) : esc(c.subject || r.email_id)}</h3>
           <p class="summary">${esc(summarize(r))}</p>
@@ -530,17 +529,46 @@ export function mount(root, ctx) {
     }
   }
 
+  function applyFiledToDom() {
+    if (state.showFiled) {
+      renderCards(false);
+      return;
+    }
+    const visible = new Set(filtered().map((r) => r.email_id).filter(Boolean));
+    $$(".mail-card[data-email]", cardsEl).forEach((el) => {
+      const id = el.dataset.email;
+      if (id && !visible.has(id)) {
+        selected.delete(id);
+        el.remove();
+      }
+    });
+    const have = new Set($$(".mail-card[data-email]", cardsEl).map((el) => el.dataset.email));
+    const missing = [...visible].some((id) => !have.has(id));
+    if (missing || (!$$(".mail-card", cardsEl).length && (store.s.runs.length || pendingItems().length))) {
+      renderCards(false);
+      return;
+    }
+    renderHits($$(".mail-card", cardsEl).length);
+    syncBulk();
+  }
+
   function update(_s, reason) {
+    if (reason === "busy" || reason === "health") return;
     renderHubs();
+    if (reason === "metrics") return;
     renderFilters();
-    renderCards(reason !== "refresh" && reason !== "job");
     renderDocketCopy();
     renderFolder();
+    if (reason === "reviewed") {
+      applyFiledToDom();
+      return;
+    }
+    renderCards(reason !== "refresh" && reason !== "job");
   }
 
   update();
   const unMag = magnetize(hubsEl, ".hub", 6);
   const unTilt = tiltify(hubsEl, ".hub", { max: 3, glare: true });
-  const unCardTilt = tiltify(cardsEl, ".mail-card", { max: 2, glare: true });
+  const unCardTilt = tiltify(cardsEl, ".mail-card", { max: 0.7, glare: true, ignore: ".card-check, .btn" });
   return { update, destroy() { clearTimeout(findTimer); removeEventListener("keydown", onFindKey); unMag?.(); unTilt?.(); unCardTilt?.(); } };
 }

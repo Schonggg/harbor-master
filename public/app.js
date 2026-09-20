@@ -1,15 +1,15 @@
 // Harbormaster Bridge — shell: routing, store wiring, header, drawer, toasts.
-import { store } from "./lib/store.js?v=59";
+import { store } from "./lib/store.js?v=60";
 import { mountScene, scene } from "./lib/scene.js?v=13";
-import { $, $$, h, esc } from "./lib/dom.js?v=59";
-import { gsap, reduced, swapView, countTo, pulse, mountSpotlight, playBoot, mountParallax } from "./lib/motion.js?v=15";
-import { renderDetail } from "./views/detail.js?v=59";
-import * as board from "./views/board.js?v=59";
-import * as court from "./views/court.js?v=59";
-import * as ledger from "./views/ledger.js?v=59";
-import * as chaos from "./views/chaos.js?v=59";
-import * as metrics from "./views/metrics.js?v=59";
-import * as pilot from "./views/pilot.js?v=59";
+import { $, $$, h, esc } from "./lib/dom.js?v=60";
+import { gsap, reduced, swapView, countTo, pulse, mountSpotlight, playBoot, mountParallax } from "./lib/motion.js?v=16";
+import { renderDetail } from "./views/detail.js?v=60";
+import * as board from "./views/board.js?v=60";
+import * as court from "./views/court.js?v=60";
+import * as ledger from "./views/ledger.js?v=60";
+import * as chaos from "./views/chaos.js?v=60";
+import * as metrics from "./views/metrics.js?v=60";
+import * as pilot from "./views/pilot.js?v=60";
 
 const VIEWS = { board, court, pilot, ledger, chaos, metrics };
 const ORDER = Object.keys(VIEWS);
@@ -242,7 +242,7 @@ store.onChange((s, detail) => {
     toast(`Ruling did not save: ${detail.message || "network"}`, "err", 6000);
   }
   current.instance?.update?.(s, detail?.reason);
-  if (drawerOpen && detail?.reason !== "busy") {
+  if (drawerOpen && detail?.reason !== "busy" && detail?.reason !== "reviewed") {
     const runId = $(".drawer-inner", drawer)?.dataset?.run;
     if (runId) renderDetail(drawer, runId, ctx);
   }

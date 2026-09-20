@@ -5,7 +5,7 @@
 //   offline — replays captured payloads from demo-data.js and simulates the
 //             ledger/replay loop client-side so the demo still tells its story
 //             on a static HTTPS host.
-import { request, API_BASE, ApiError, discoverApiBase, EMAIL_GET_TIMEOUT_MS, markReviewed as postReviewed } from "./api.js?v=59";
+import { request, API_BASE, ApiError, discoverApiBase, EMAIL_GET_TIMEOUT_MS, markReviewed as postReviewed } from "./api.js?v=60";
 import { DEMO_RUNS, DEMO_EMAILS, DEMO_CHAOS, DEMO_AUTONOMY } from "./demo-data.js";
 
 const clone = (v) => (typeof structuredClone === "function" ? structuredClone(v) : JSON.parse(JSON.stringify(v)));
@@ -634,23 +634,28 @@ class Store extends EventTarget {
     const ids = [...new Set((emailIds || []).map((id) => String(id || "").trim()).filter(Boolean))];
     if (!ids.length) return { ok: true, count: 0, reviewed: Boolean(reviewed) };
     const flag = Boolean(reviewed);
-    if (this.live) {
-      await postReviewed(ids, flag);
-    } else {
-      try {
-        const cur = new Set(JSON.parse(localStorage.getItem("hm.reviewedIds") || "[]"));
-        ids.forEach((id) => (flag ? cur.add(id) : cur.delete(id)));
-        localStorage.setItem("hm.reviewedIds", JSON.stringify([...cur]));
-      } catch { /* private mode */ }
-    }
+    const previous = this.state.runs;
     const hit = new Set(ids);
-    const runs = this.state.runs.map((run) => {
+    const patched = previous.map((run) => {
       if (!hit.has(run.email_id)) return run;
       const nextCard = { ...(run.payload?.card || {}), reviewed: flag };
       return { ...run, reviewed: flag, payload: { ...run.payload, card: nextCard } };
     });
-    this.set({ runs }, "reviewed");
-    this.recompute();
+    this.set({ runs: patched }, "reviewed");
+    try {
+      if (this.live) {
+        await postReviewed(ids, flag);
+      } else {
+        try {
+          const cur = new Set(JSON.parse(localStorage.getItem("hm.reviewedIds") || "[]"));
+          ids.forEach((id) => (flag ? cur.add(id) : cur.delete(id)));
+          localStorage.setItem("hm.reviewedIds", JSON.stringify([...cur]));
+        } catch { /* private mode */ }
+      }
+    } catch (err) {
+      this.set({ runs: previous }, "reviewed");
+      throw err;
+    }
     return { ok: true, count: ids.length, reviewed: flag };
   }
 

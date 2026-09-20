@@ -61,7 +61,7 @@ Of the 220 comparison cases: **154 OK**, **46 MISMATCH**, **20 NEEDS_REVIEW**. N
 
 **Reader.** Image-only PDFs go to VisionParser. A short labelled PDF still uses PdfParser (`pdf_has_text` min 1 character) so the 220-cell format matrix stays green. DOCX tables flatten to `label: value`. Party names strip `(Non-Negotiable)` / pipe-address tails before L5 exact compare.
 
-**Bridge.** Board **Find** (`/`): email number or keywords. Case **Find in source** jumps to the email body or, when the value came from an SI/BL file, the attachment excerpt under the body. Court has no 0.5×/1×/2× playback chrome (Replay / `R` still re-runs the hearing). Pilot CLEAR/HOLD on a contested pair writes a Ledger rule. Chaos smash is a throwaway `chaos_*` row, rules-only — it does not rewrite an official CLEAR mail. Board **filed folder**: a checkbox on each card files it off the open docket (`reviewed_marks` in Postgres). Closing the site, adding mail, or re-running AI does not unfile it. Cache lockstep: `app.js?v=59` / `store.js?v=59`, `styles.css?v=40`.
+**Bridge.** Board **Find** (`/`): email number or keywords. Case **Find in source** jumps to the email body or, when the value came from an SI/BL file, the attachment excerpt under the body. Court has no 0.5×/1×/2× playback chrome (Replay / `R` still re-runs the hearing). Pilot CLEAR/HOLD on a contested pair writes a Ledger rule. Chaos smash is a throwaway `chaos_*` row, rules-only — it does not rewrite an official CLEAR mail. Board **filed folder**: a checkbox on each card files it off the open docket (`reviewed_marks` in Postgres). Closing the site, adding mail, or re-running AI does not unfile it. Cache lockstep: `app.js?v=60` / `store.js?v=60`, `styles.css?v=41`.
 
 **Tests.** `py -3 -m pytest -q --ignore=tests/test_seed_robustness.py --ignore=tests/test_official_score.py --ignore=tests/test_scanned_pdf.py` is **142 passed**.
 
@@ -123,7 +123,7 @@ Six operator views, same origin as the API when served by FastAPI:
 
 | Key | View | Purpose |
 |---|---|---|
-| `1` | **Board** | Docket of unique emails. Official subjects, CLEAR / HOLD / PILOT counters. Full-width **Find** strip. Checkboxes file handled cards into a folder (`已审阅 N · 查看`); they leave the open docket until unfiled. |
+| `1` | **Board** | Docket of unique emails. Official subjects, CLEAR / HOLD / PILOT counters. Full-width **Find** strip. Checkboxes file handled cards into a folder (`Filed N · View`); they leave the open docket until unfiled. The case drawer can file the same way. |
 | `2` | **Court** | Charge first (SI vs BL), then one named defence at a time, then the three-state ruling. `R` replays the hearing. No playback-speed control. |
 | `3` | **Pilot** | Human queue. Filters: Lock to Ledger / All / Chaos / Degraded. Case CLEAR or HOLD teaches remaining SI/BL pairs. Field **Lock in Ledger** writes one pair. |
 | `4` | **Ledger** | Reusable pair rules: who decided, which writings, which cases replay touched. |
@@ -146,7 +146,7 @@ Header buttons are **Refresh** and **Load inbox**. Load inbox fills at most one 
 
 **Board cards.** Mild mouse-follow tilt. Every view must import `store.js` with the same `?v=` as `app.js` in `web/index.html`. A mismatch creates two stores and the board looks empty while the header still counts 520.
 
-**Cache.** After a UI change, bump that `?v=` lockstep (`app.js` / `store.js` currently `?v=59`, `styles.css` `?v=40`), run `py -3 scripts/vercel_build.py`, then deploy. Do not hard-refresh only `index.html`.
+**Cache.** After a UI change, bump that `?v=` lockstep (`app.js` / `store.js` currently `?v=60`, `styles.css` `?v=41`), run `py -3 scripts/vercel_build.py`, then deploy. Do not hard-refresh only `index.html`.
 
 The frontend (`web/`) is static - no build step. Three.js and GSAP are vendored. If the API is unreachable, the Bridge falls back to **offline replay** from `web/lib/demo-data.js`. That 14-email snapshot is **not** mixed into the live 520 board.
 

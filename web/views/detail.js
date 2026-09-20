@@ -1,11 +1,11 @@
 // Case drawer: verdict hero, seven-field comparison, evidence with in-place
 // highlighting of the original message, and hand-offs to court / pilot.
-import { store as bridgeStore } from "../lib/store.js?v=59";
-import { esc, $, $$, on, shortId, fmtUsd, diffChars, renderDiff, reEscape, sourceWaitHtml } from "../lib/dom.js?v=59";
+import { store as bridgeStore } from "../lib/store.js?v=60";
+import { esc, $, $$, on, shortId, fmtUsd, diffChars, renderDiff, reEscape, sourceWaitHtml } from "../lib/dom.js?v=60";
 import { enter } from "../lib/motion.js";
 import { fieldZh, fieldEn, scoutZh, VERDICT, STATE, RISK, strategyZh, failureZh } from "../lib/copy.js";
-import { card, sevenFields, extraFields, orderedFields, ledgerRef, confidenceOf, pilotReasons } from "../lib/case.js?v=59";
-import { pairView, present, effectiveState, valueFromBody } from "../lib/field-display.js?v=59";
+import { card, sevenFields, extraFields, orderedFields, ledgerRef, confidenceOf, pilotReasons } from "../lib/case.js?v=60";
+import { pairView, present, effectiveState, valueFromBody } from "../lib/field-display.js?v=60";
 
 export function renderDetail(root, runId, ctx) {
   const store = ctx.store || bridgeStore;
@@ -16,6 +16,7 @@ export function renderDetail(root, runId, ctx) {
   }
   const c = card(run);
   const v = c.verdict || run.verdict;
+  const filed = run.reviewed === true || c.reviewed === true;
   const fields = sevenFields(run);
   const extras = extraFields(run);
   const charged = fields.filter((f) => f.charge && effectiveState(f) !== "MATCH");
@@ -42,6 +43,10 @@ export function renderDetail(root, runId, ctx) {
         </div>
         ${reasons.length ? `<div class="reason-line"><span class="muted">Why the hand went up</span>${reasons.map((r) => `<span class="chip warn">${esc(r.text)}</span>`).join("")}</div>` : ""}
         <div class="decide-row">
+          <label class="detail-file">
+            <input type="checkbox" data-file-card ${filed ? "checked" : ""} />
+            <span>${filed ? "Filed — in folder" : "File to folder"}</span>
+          </label>
           ${v === "PILOT" ? `
             <button type="button" class="btn btn-lg btn-clear" data-case-verdict="CLEAR">Release · CLEAR</button>
             <button type="button" class="btn btn-lg btn-hold" data-case-verdict="HOLD">Stop · HOLD</button>` : ""}
@@ -80,6 +85,22 @@ export function renderDetail(root, runId, ctx) {
 
   enter($$(".frow:not(.head)", root), { stagger: 0.03, y: 10 });
 
+  on(root, "change", "[data-file-card]", async (e, input) => {
+    const emailId = run.email_id;
+    if (!emailId) return;
+    const next = input.checked;
+    const label = input.closest("label")?.querySelector("span");
+    if (label) label.textContent = next ? "Filed — in folder" : "File to folder";
+    try {
+      await store.markReviewed([emailId], next);
+      ctx.toast(next ? "Filed" : "Returned to docket", "ok");
+      if (next) ctx.closeDetail();
+    } catch (err) {
+      input.checked = !next;
+      if (label) label.textContent = !next ? "Filed — in folder" : "File to folder";
+      ctx.toast(err.message || "Could not update the folder", "err");
+    }
+  });
   on(root, "click", "[data-go-court]", () => { ctx.closeDetail(); ctx.navigate("court", { run: run.run_id, field: charged[0]?.field }); });
   on(root, "click", "[data-go-pilot]", () => { ctx.closeDetail(); ctx.navigate("pilot", { run: run.run_id }); });
   on(root, "click", "[data-case-verdict]", async (_, el) => {

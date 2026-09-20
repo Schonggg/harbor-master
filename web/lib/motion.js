@@ -227,12 +227,21 @@ export function magnetize(root, selector, strength = 6) {
  * Perspective tilt on cards. Rotation only. Caps at a few degrees so
  * projectors do not get motion-sick and so it stays 60fps.
  */
-export function tiltify(root, selector, { max = 7, glare = true } = {}) {
+export function tiltify(root, selector, { max = 7, glare = true, ignore = "" } = {}) {
   if (reduced || !g) return () => {};
   const map = new WeakMap();
+  const flatten = (el) => {
+    const q = map.get(el);
+    if (q) { q.rx(0); q.ry(0); }
+    el.classList.remove("lit");
+  };
   const onMove = (e) => {
     const el = e.target.closest?.(selector);
     if (!el || !root.contains(el)) return;
+    if (ignore && e.target.closest?.(ignore)) {
+      flatten(el);
+      return;
+    }
     const r = el.getBoundingClientRect();
     const px = (e.clientX - r.left) / r.width;
     const py = (e.clientY - r.top) / r.height;
@@ -241,8 +250,8 @@ export function tiltify(root, selector, { max = 7, glare = true } = {}) {
     let q = map.get(el);
     if (!q) {
       q = {
-        rx: g.quickTo(el, "rotationX", { duration: 0.4, ease: "power3" }),
-        ry: g.quickTo(el, "rotationY", { duration: 0.4, ease: "power3" }),
+        rx: g.quickTo(el, "rotationX", { duration: 0.16, ease: "power3" }),
+        ry: g.quickTo(el, "rotationY", { duration: 0.16, ease: "power3" }),
       };
       map.set(el, q);
     }
@@ -253,15 +262,20 @@ export function tiltify(root, selector, { max = 7, glare = true } = {}) {
   const onOut = (e) => {
     const el = e.target.closest?.(selector);
     if (!el || el.contains(e.relatedTarget)) return;
-    const q = map.get(el);
-    if (q) { q.rx(0); q.ry(0); }
-    el.classList.remove("lit");
+    flatten(el);
+  };
+  const onDown = (e) => {
+    if (!ignore || !e.target.closest?.(ignore)) return;
+    const el = e.target.closest?.(selector);
+    if (el) flatten(el);
   };
   root.addEventListener("pointermove", onMove);
   root.addEventListener("pointerout", onOut);
+  root.addEventListener("pointerdown", onDown);
   return () => {
     root.removeEventListener("pointermove", onMove);
     root.removeEventListener("pointerout", onOut);
+    root.removeEventListener("pointerdown", onDown);
   };
 }
 

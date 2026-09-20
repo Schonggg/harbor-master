@@ -82,6 +82,7 @@ export async function markReviewed(emailIds, reviewed = true) {
   return request("/api/board/reviewed", {
     method: "POST",
     body: { email_ids: emailIds, reviewed },
+    timeout: 15000,
   });
 }
 
