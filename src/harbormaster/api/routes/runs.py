@@ -165,6 +165,10 @@ def _board_payload(payload: dict) -> dict:
 @router.get("/runs")
 def list_runs():
     store = LedgerStore()
+    # Repair prior MATCH-pair ledger bleed before the Bridge paints header counts.
+    from harbormaster.ledger.repair import repair_ledger_closures
+
+    repair_ledger_closures(store)
     rows = store.list_runs()
     if store.backend == "postgres":
         rows = [r for r in rows if not is_demo_email_id(r.get("email_id"))]

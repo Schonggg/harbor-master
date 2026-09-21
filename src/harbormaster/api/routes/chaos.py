@@ -69,10 +69,13 @@ def chaos_types():
 @router.post("/chaos/reset")
 def reset_chaos():
     store = LedgerStore()
+    from harbormaster.ledger.repair import repair_ledger_closures
+
+    repair = repair_ledger_closures(store)
     dropped = store.purge_email_prefix(_SMASH_PREFIX)
     pruned = store.prune_duplicate_runs()
     restored = _restore_injected_official(store)
-    return {"dropped": dropped, "pruned": pruned, "restored": restored}
+    return {"dropped": dropped, "pruned": pruned, "restored": restored, "ledger_repair": repair}
 
 
 @router.post("/chaos/{chaos_type}")

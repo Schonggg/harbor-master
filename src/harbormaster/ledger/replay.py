@@ -15,9 +15,17 @@ def _rollup(field_verdicts: list[dict]) -> str:
     return CaseVerdict.CLEAR.value
 
 
-def _cites_rule(rationale: str, rule_id: str) -> bool:
+def rule_id_from_rationale(rationale: str) -> str | None:
     text = str(rationale or "")
-    return text in {f"ledger:{rule_id}", f"ledger replay:{rule_id}"} or text.endswith(f":{rule_id}")
+    for prefix in ("ledger replay:", "ledger:"):
+        if text.startswith(prefix):
+            rid = text[len(prefix) :].strip()
+            return rid or None
+    return None
+
+
+def _cites_rule(rationale: str, rule_id: str) -> bool:
+    return rule_id_from_rationale(rationale) == rule_id
 
 
 class Replayer:
@@ -27,7 +35,7 @@ class Replayer:
     def replay(self, rule_id: str) -> dict:
         rules = {r.rule_id: r for r in self.store.list_rules(active_only=False)}
         rule = rules.get(rule_id)
-        if not rule or rule.field == "case":
+        if not rule or not rule.active or rule.field == "case":
             return {"updated": 0, "rule_id": rule_id}
 
         updated = 0

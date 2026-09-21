@@ -121,6 +121,9 @@ def demo_seed():
         store.purge_demo_runs()
         store.purge_email_prefix("chaos_")
         store.prune_duplicate_runs()
+        from harbormaster.ledger.repair import repair_ledger_closures
+
+        repair_ledger_closures(store)
     official = store.list_inbox_ids() or loader.list_email_ids(source="official")
     official = [eid for eid in official if not is_demo_email_id(eid)]
     have_ids = store.list_run_email_ids()

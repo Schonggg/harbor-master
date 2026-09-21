@@ -348,6 +348,162 @@ def test_opening_ledger_does_not_change_run_verdicts(tmp_path, monkeypatch):
     assert after == before
 
 
+def test_repair_reopens_mail_closed_by_mass_taught_match_pairs(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "")
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "harbormaster.db"))
+    clear_caches()
+    store = LedgerStore()
+    from harbormaster.ledger.promoter import Promoter
+    from harbormaster.ledger.repair import repair_ledger_closures
+    from harbormaster.ledger.replay import Replayer
+    from harbormaster.models import PilotDecision, PilotReview
+
+    matched_pair = {
+        "field": "shipper",
+        "state": "UNCERTAIN",
+        "charge": {
+            "left": {"raw_value": "ACME CO., LTD."},
+            "right": {"raw_value": "ACME CO LTD"},
+        },
+    }
+    store.save_run(
+        "run-human",
+        "case-human",
+        "email_human",
+        "CLEAR",
+        {
+            "card": {
+                "verdict": "CLEAR",
+                "pilot_override": True,
+                "email_id": "email_human",
+                "field_verdicts": [dict(matched_pair, state="MATCH", winning_strategy="suffix_strip")],
+            }
+        },
+    )
+    store.save_run(
+        "run-bleed",
+        "case-bleed",
+        "email_bleed",
+        "PILOT",
+        {
+            "card": {
+                "verdict": "PILOT",
+                "field_verdicts": [
+                    dict(matched_pair),
+                    {
+                        "field": "consignee",
+                        "state": "UNCERTAIN",
+                        "charge": {
+                            "left": {"raw_value": "OTHER A"},
+                            "right": {"raw_value": "OTHER B"},
+                        },
+                    },
+                ],
+            }
+        },
+    )
+    # Simulate the old bug: CLEAR taught an already-MATCH pair with note "case CLEAR".
+    bad = Promoter(store).promote(
+        PilotReview(
+            case_id="case-human",
+            field="shipper",
+            decision=PilotDecision.ACCEPT_AS_MATCH,
+            promote_to_ledger=True,
+            reviewer="pilot",
+            note="case CLEAR",
+        ),
+        "ACME CO., LTD.",
+        "ACME CO LTD",
+    )
+    assert bad
+    Replayer(store).replay(bad.rule_id)
+    bleed = store.get_run_by_ref("case-bleed")
+    assert bleed["verdict"] == "PILOT" or bleed["payload"]["card"]["field_verdicts"][0]["state"] == "MATCH"
+
+    # Force CLEAR on bleed the way mass replay used to when shipper was the only uncertain field.
+    store.save_run(
+        "run-bleed",
+        "case-bleed",
+        "email_bleed",
+        "CLEAR",
+        {
+            "card": {
+                "verdict": "CLEAR",
+                "field_verdicts": [
+                    {
+                        "field": "shipper",
+                        "state": "MATCH",
+                        "rationale": f"ledger replay:{bad.rule_id}",
+                        "winning_strategy": "ledger",
+                        "charge": matched_pair["charge"],
+                    }
+                ],
+            }
+        },
+    )
+
+    out = repair_ledger_closures(store, force=True)
+    assert out["revoked_mass_taught"] == 1
+    assert out["repaired_runs"] >= 1
+    human = store.get_run_by_ref("case-human")
+    assert human["verdict"] == "CLEAR"
+    assert human["payload"]["card"]["pilot_override"] is True
+    bleed = store.get_run_by_ref("case-bleed")
+    assert bleed["verdict"] == "PILOT"
+    assert bleed["payload"]["card"]["field_verdicts"][0]["state"] == "UNCERTAIN"
+    again = repair_ledger_closures(store)
+    assert again.get("skipped") is True
+
+
+def test_replayer_ignores_inactive_rules(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "")
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "harbormaster.db"))
+    clear_caches()
+    store = LedgerStore()
+    from harbormaster.ledger.promoter import Promoter
+    from harbormaster.ledger.replay import Replayer
+    from harbormaster.models import PilotDecision, PilotReview
+
+    store.save_run(
+        "run-a",
+        "case-a",
+        "email_a",
+        "PILOT",
+        {
+            "card": {
+                "verdict": "PILOT",
+                "field_verdicts": [
+                    {
+                        "field": "shipper",
+                        "state": "UNCERTAIN",
+                        "charge": {
+                            "left": {"raw_value": "A"},
+                            "right": {"raw_value": "B"},
+                        },
+                    }
+                ],
+            }
+        },
+    )
+    rule = Promoter(store).promote(
+        PilotReview(
+            case_id="case-x",
+            field="shipper",
+            decision=PilotDecision.ACCEPT_AS_MATCH,
+            promote_to_ledger=True,
+            reviewer="pilot",
+            note="manual lock",
+        ),
+        "A",
+        "B",
+    )
+    store.revoke(rule.rule_id)
+    assert Replayer(store).replay(rule.rule_id)["updated"] == 0
+    assert store.get_run("run-a")["verdict"] == "PILOT"
+
+
 def test_replayer_does_not_overwrite_pilot_override(tmp_path, monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "")
     monkeypatch.setenv("DATA_DIR", str(tmp_path))

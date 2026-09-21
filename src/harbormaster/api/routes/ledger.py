@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 
 from harbormaster.api.routes.review import CASE_FIELD
 from harbormaster.ledger.promoter import Promoter
+from harbormaster.ledger.repair import repair_ledger_closures
 from harbormaster.ledger.replay import Replayer
 from harbormaster.ledger.store import LedgerStore
 from harbormaster.models import PilotDecision, PilotReview
@@ -44,10 +45,17 @@ def _backfill_pilot_case_stamps(store: LedgerStore) -> None:
 @router.get("/ledger")
 @router.get("/ledger/rules")
 def list_ledger():
-    """List ledger rules. May backfill missing case stamps; never changes board verdicts."""
+    """List ledger rules. Repairs prior bleed, backfills case stamps; never invents new CLEARs."""
     store = LedgerStore()
+    repair_ledger_closures(store)
     _backfill_pilot_case_stamps(store)
     return [r.model_dump(mode="json") for r in store.list_rules(active_only=False)]
+
+
+@router.post("/ledger/repair")
+def repair_ledger(force: bool = False):
+    """Re-open mail wrongly auto-CLEARed by mass-taught MATCH pair rules."""
+    return repair_ledger_closures(LedgerStore(), force=force)
 
 
 @router.post("/ledger/{rule_id}/revoke")

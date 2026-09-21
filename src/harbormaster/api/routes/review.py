@@ -67,7 +67,7 @@ def _promote_one(store: LedgerStore, promoter: Promoter, case_id: str, field: st
 
 
 def _promote_pairs_for_verdict(store: LedgerStore, case_id: str, card: dict, body: CaseVerdictBody, email_id: str = "") -> tuple[list[dict], int]:
-    """Every Pilot CLEAR/HOLD lands on the ledger. Contested (and two-way MATCH) pairs also replay."""
+    """Case stamp always; contested UNCERTAIN/MISMATCH pairs may replay onto open Pilot mail."""
     pair_decision = (
         PilotDecision.ACCEPT_AS_MATCH if body.verdict == "CLEAR" else PilotDecision.CONFIRM_MISMATCH
     )
@@ -122,6 +122,9 @@ def review_queue():
 
 @router.post("/review/decide")
 def decide(body: ReviewBody):
+    if body.field == CASE_FIELD:
+        raise HTTPException(status_code=400, detail="use /review/verdict for case stamps")
+    store = LedgerStore()
     review = PilotReview(
         case_id=body.case_id,
         field=body.field,
@@ -130,10 +133,10 @@ def decide(body: ReviewBody):
         reviewer=body.reviewer,
         note=body.note,
     )
-    rule = Promoter().promote(review, body.left_value, body.right_value)
+    rule = Promoter(store).promote(review, body.left_value, body.right_value)
     replay_result = {"updated": 0}
     if rule:
-        replay_result = Replayer().replay(rule.rule_id)
+        replay_result = Replayer(store).replay(rule.rule_id)
     return {"review": review.model_dump(mode="json"), "rule": rule.model_dump(mode="json") if rule else None, "replay": replay_result}
 
 
