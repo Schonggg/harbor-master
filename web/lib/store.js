@@ -5,7 +5,7 @@
 //   offline — replays captured payloads from demo-data.js and simulates the
 //             ledger/replay loop client-side so the demo still tells its story
 //             on a static HTTPS host.
-import { request, API_BASE, ApiError, discoverApiBase, EMAIL_GET_TIMEOUT_MS, markReviewed as postReviewed } from "./api.js?v=67";
+import { request, API_BASE, ApiError, discoverApiBase, EMAIL_GET_TIMEOUT_MS, markReviewed as postReviewed } from "./api.js?v=68";
 import { DEMO_RUNS, DEMO_EMAILS, DEMO_CHAOS, DEMO_AUTONOMY } from "./demo-data.js";
 
 const clone = (v) => (typeof structuredClone === "function" ? structuredClone(v) : JSON.parse(JSON.stringify(v)));
@@ -304,6 +304,20 @@ class Store extends EventTarget {
         autonomy: autonomy || this.state.autonomy,
       }, "refresh-aux");
     });
+  }
+
+  async loadLedger() {
+    if (!this.live) return this.state.ledger;
+    try {
+      const ledger = await request("/api/ledger", { timeout: 20000 });
+      if (Array.isArray(ledger)) {
+        this.set({ ledger }, "ledger");
+        return ledger;
+      }
+    } catch {
+      /* keep whatever we already have */
+    }
+    return this.state.ledger;
   }
 
   _mergeLedger(rules) {
@@ -689,8 +703,27 @@ class Store extends EventTarget {
         await this.refresh();
         return;
       }
+      const rule = this.state.ledger.find((r) => r.rule_id === ruleId);
       const ledger = this.state.ledger.map((r) => (r.rule_id === ruleId ? { ...r, active: false, revoked_at: new Date().toISOString() } : r));
-      this.set({ ledger }, "revoke");
+      let runs = this.state.runs;
+      if (rule && rule.field !== "case") {
+        runs = this.state.runs.map((run) => {
+          const card = run.payload?.card;
+          if (!card) return run;
+          let changed = false;
+          const fvs = (card.field_verdicts || []).map((fv) => {
+            const rationale = String(fv.rationale || "");
+            if (rationale !== `ledger:${ruleId}` && rationale !== `ledger replay:${ruleId}`) return fv;
+            changed = true;
+            return { ...fv, state: "UNCERTAIN", rationale: "ledger revoke", winning_strategy: fv.winning_strategy === "ledger" ? null : fv.winning_strategy };
+          });
+          if (!changed) return run;
+          const verdict = card.pilot_override ? card.verdict : rollup(fvs);
+          return { ...run, verdict, payload: { ...run.payload, card: { ...card, field_verdicts: fvs, verdict } } };
+        });
+      }
+      this.set({ runs, ledger }, "revoke");
+      this.recompute();
     });
   }
 

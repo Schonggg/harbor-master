@@ -28,7 +28,13 @@ def _fv_writings(fv: dict) -> tuple[str, str, str]:
 
 
 def _lockable_pairs(card: dict, verdict: str = "CLEAR") -> list[tuple[str, str, str]]:
-    """SI/BL writings a human stamp can teach. CLEAR also keeps two-way MATCH pairs."""
+    """Contested SI/BL writings a human stamp can teach and replay.
+
+    Only UNCERTAIN / MISMATCH pairs. Already-MATCH fields (suffix strip, LOCODE, …)
+    must not be promoted — replaying them across the corpus would silently flip
+    unrelated PILOT mail to CLEAR. The case stamp still records every CLEAR/HOLD.
+    """
+    del verdict  # kept for call-site compatibility
     out: list[tuple[str, str, str]] = []
     for fv in card.get("field_verdicts") or []:
         if not isinstance(fv, dict):
@@ -38,12 +44,8 @@ def _lockable_pairs(card: dict, verdict: str = "CLEAR") -> list[tuple[str, str, 
         field, left, right = _fv_writings(fv)
         if not field or field == CASE_FIELD or not left or not right:
             continue
-        state = fv.get("state")
-        if state in {"UNCERTAIN", "MISMATCH"}:
+        if fv.get("state") in {"UNCERTAIN", "MISMATCH"}:
             out.append((field, left, right))
-        elif verdict == "CLEAR" and state == "MATCH":
-            if " ".join(left.upper().split()) != " ".join(right.upper().split()):
-                out.append((field, left, right))
     return out
 
 

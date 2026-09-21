@@ -209,6 +209,145 @@ def test_prune_duplicate_runs_keeps_newest(tmp_path, monkeypatch):
     assert rows[0]["verdict"] == "CLEAR"
 
 
+def test_closing_clear_does_not_teach_already_matched_pairs(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "")
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "harbormaster.db"))
+    clear_caches()
+    store = LedgerStore()
+    matched = {
+        "field": "shipper",
+        "state": "MATCH",
+        "winning_strategy": "suffix_strip",
+        "charge": {
+            "left": {"raw_value": "ACME CO., LTD."},
+            "right": {"raw_value": "ACME CO LTD"},
+        },
+    }
+    uncertain = {
+        "field": "consignee",
+        "state": "UNCERTAIN",
+        "charge": {
+            "left": {"raw_value": "BETA TRADING"},
+            "right": {"raw_value": "BETA TRADE PTE"},
+        },
+    }
+    store.save_run(
+        "run-src",
+        "case-src",
+        "email_src",
+        "PILOT",
+        {"card": {"verdict": "PILOT", "field_verdicts": [matched, uncertain]}},
+    )
+    store.save_run(
+        "run-other",
+        "case-other",
+        "email_other",
+        "PILOT",
+        {
+            "card": {
+                "verdict": "PILOT",
+                "field_verdicts": [
+                    dict(matched, state="UNCERTAIN", winning_strategy=None),
+                    {
+                        "field": "notify_party",
+                        "state": "UNCERTAIN",
+                        "charge": {
+                            "left": {"raw_value": "NOTIFY A"},
+                            "right": {"raw_value": "NOTIFY B"},
+                        },
+                    },
+                ],
+            }
+        },
+    )
+    from harbormaster.api.routes.review import CaseVerdictBody, set_case_verdict
+
+    out = set_case_verdict(CaseVerdictBody(case_id="case-src", verdict="CLEAR", reviewer="pilot"))
+    fields = {r["field"] for r in out["rules"]}
+    assert fields == {"consignee", "case"}
+    other = store.get_run_by_ref("case-other")
+    assert other["verdict"] == "PILOT"
+    assert other["payload"]["card"]["field_verdicts"][0]["state"] == "UNCERTAIN"
+
+
+def test_revoke_pair_rule_reopens_auto_cleared_mail(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "")
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "harbormaster.db"))
+    clear_caches()
+    store = LedgerStore()
+    pair = {
+        "field": "shipper",
+        "state": "UNCERTAIN",
+        "charge": {
+            "left": {"raw_value": "ACME PTE LTD"},
+            "right": {"raw_value": "ACME Pte. Ltd."},
+        },
+    }
+    store.save_run(
+        "run-teach",
+        "case-teach",
+        "email_teach",
+        "PILOT",
+        {"card": {"verdict": "PILOT", "field_verdicts": [pair]}},
+    )
+    store.save_run(
+        "run-twin",
+        "case-twin",
+        "email_twin",
+        "PILOT",
+        {"card": {"verdict": "PILOT", "field_verdicts": [dict(pair)]}},
+    )
+    from harbormaster.api.routes.review import CaseVerdictBody, set_case_verdict
+    from fastapi.testclient import TestClient
+    from harbormaster.api.main import app
+
+    out = set_case_verdict(CaseVerdictBody(case_id="case-teach", verdict="CLEAR", reviewer="pilot"))
+    twin = store.get_run_by_ref("case-twin")
+    assert twin["verdict"] == "CLEAR"
+    shipper_rule = next(r for r in out["rules"] if r["field"] == "shipper")
+    client = TestClient(app)
+    revoked = client.post(f"/api/ledger/{shipper_rule['rule_id']}/revoke").json()
+    assert revoked["revoked"] == shipper_rule["rule_id"]
+    assert revoked["undone"]["updated"] >= 1
+    twin = store.get_run_by_ref("case-twin")
+    assert twin["verdict"] == "PILOT"
+    assert twin["payload"]["card"]["field_verdicts"][0]["state"] == "UNCERTAIN"
+    taught = store.get_run_by_ref("case-teach")
+    assert taught["verdict"] == "CLEAR"
+    assert taught["payload"]["card"]["pilot_override"] is True
+
+
+def test_opening_ledger_does_not_change_run_verdicts(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "")
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "harbormaster.db"))
+    clear_caches()
+    store = LedgerStore()
+    store.save_run(
+        "run-p",
+        "case-p",
+        "email_pilot",
+        "PILOT",
+        {"card": {"verdict": "PILOT", "field_verdicts": []}},
+    )
+    store.save_run(
+        "run-c",
+        "case-c",
+        "email_clear",
+        "CLEAR",
+        {"card": {"verdict": "CLEAR", "email_id": "email_clear", "pilot_override": True}},
+    )
+    from harbormaster.api.main import app
+
+    before = {r["email_id"]: r["verdict"] for r in store.list_runs()}
+    rows = TestClient(app).get("/api/ledger").json()
+    assert any(r["field"] == "case" and r["left_pattern"] == "email_clear" for r in rows)
+    after = {r["email_id"]: r["verdict"] for r in store.list_runs()}
+    assert after == before
+
+
 def test_replayer_does_not_overwrite_pilot_override(tmp_path, monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "")
     monkeypatch.setenv("DATA_DIR", str(tmp_path))

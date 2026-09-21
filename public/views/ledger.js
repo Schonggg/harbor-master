@@ -1,10 +1,10 @@
 // ④ Ledger — every rule a pilot ever taught the system, with provenance and revoke.
-import { store as bridgeStore } from "../lib/store.js?v=67";
-import { esc, $, $$, on, shortId, fmtTime } from "../lib/dom.js?v=67";
+import { store as bridgeStore } from "../lib/store.js?v=68";
+import { esc, $, $$, on, shortId, fmtTime } from "../lib/dom.js?v=68";
 import { enter } from "../lib/motion.js";
 import { fieldZh } from "../lib/copy.js";
-import { card, orderedFields, ledgerRef } from "../lib/case.js?v=67";
-import { present, effectiveState } from "../lib/field-display.js?v=67";
+import { card, orderedFields, ledgerRef } from "../lib/case.js?v=68";
+import { present, effectiveState } from "../lib/field-display.js?v=68";
 
 export function mount(root, ctx) {
   const store = ctx.store || bridgeStore;
@@ -13,7 +13,7 @@ export function mount(root, ctx) {
       <div class="view-head">
         <div>
           <h1>Ledger <small>LEDGER</small></h1>
-          <p>Every Pilot CLEAR or HOLD writes at least one row here — a case stamp, plus any SI/BL pairs the human closed. Later mail with the same writings reuses those pairs. Smash/empty mail still gets a case stamp so the review is not lost. Revoke stops new mail from using a pair rule.</p>
+          <p>Every Pilot CLEAR or HOLD writes a case stamp here. Contested SI versus BL pairs are taught too, and only those pairs replay onto other open Pilot mail. Opening this page never changes Board counts. Revoke peels a pair rule off auto-closed mail and re-opens it to Pilot when needed.</p>
         </div>
         <div class="view-actions"><span class="chip signal" id="rule-count"></span></div>
       </div>
@@ -25,7 +25,7 @@ export function mount(root, ctx) {
     el.disabled = true;
     try {
       await store.revoke(el.dataset.revoke);
-      ctx.toast(`Rule #${shortId(el.dataset.revoke)} revoked. New cases will not apply it.`, "warn");
+      ctx.toast(`Rule #${shortId(el.dataset.revoke)} revoked. Matching auto-closed mail re-opens to Pilot.`, "warn");
     } catch (e) { ctx.toast(e.message, "err"); el.disabled = false; }
   });
   on(rulesEl, "click", "[data-open]", (_, el) => ctx.openDetail(el.dataset.open));
@@ -42,7 +42,7 @@ export function mount(root, ctx) {
     const active = rules.filter((r) => r.active).length;
     $("#rule-count", root).textContent = `${active} active · ${rules.length - active} revoked`;
     if (!rules.length) {
-      rulesEl.innerHTML = `<div class="empty panel"><h3>The ledger is blank</h3><p>Close a PILOT mail as CLEAR or HOLD, or lock a single field on the Pilot deck. Each human ruling lands here. Pair rules replay on later mail; a case stamp records reviews that had no SI/BL pair.</p><button type="button" class="btn btn-pilot" data-pilot>Go to Pilot <span class="arrow">→</span></button></div>`;
+      rulesEl.innerHTML = `<div class="empty panel"><h3>The ledger is blank</h3><p>Close a PILOT mail as CLEAR or HOLD, or lock a single contested field on the Pilot deck. Case stamps always land here. Pair rules only form from UNCERTAIN or MISMATCH writings — already-matched fields are not re-taught.</p><button type="button" class="btn btn-pilot" data-pilot>Go to Pilot <span class="arrow">→</span></button></div>`;
       return;
     }
     rulesEl.innerHTML = `<div class="rule-list">${rules.map((r) => {
@@ -62,7 +62,7 @@ export function mount(root, ctx) {
           <div class="meta">
             <span>Locked by <b>${esc(r.created_by)}</b> on case <button type="button" class="btn btn-sm" data-open="${esc(src?.run_id || r.source_case_id)}">#${shortId(r.source_case_id)}</button></span>
             <span>· ${fmtTime(r.created_at)}</span>
-            ${isCase ? `<span>· human ${esc(r.right_pattern)} · new mail still needs a matching SI/BL pair to auto-replay</span>` : `<span>· touches <b style="color:var(--text)">${hits.length}</b> case${hits.length === 1 ? "" : "s"}${hits.length ? ` (${hits.filter((h) => h.replayed).length} rewritten on replay)` : ""}</span>`}
+            ${isCase ? `<span>· human ${esc(r.right_pattern)} · provenance only — does not auto-close other mail</span>` : `<span>· touches <b style="color:var(--text)">${hits.length}</b> case${hits.length === 1 ? "" : "s"}${hits.length ? ` (${hits.filter((h) => h.replayed).length} rewritten on replay)` : ""}</span>`}
             ${r.note ? `<span>· ${esc(r.note)}</span>` : ""}
             ${r.revoked_at ? `<span>· revoked ${fmtTime(r.revoked_at)}</span>` : ""}
           </div>
@@ -75,5 +75,6 @@ export function mount(root, ctx) {
   }
 
   render(true);
+  store.loadLedger().then(() => render()).catch(() => {});
   return { update(_s, reason) { if (reason !== "busy") render(); }, destroy() {} };
 }

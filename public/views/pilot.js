@@ -1,11 +1,11 @@
 // ③ Pilot deck — the human in the loop. One decision becomes a ledger rule, the
 // ledger replays history, and the queue visibly collapses.
-import { store as bridgeStore } from "../lib/store.js?v=67";
-import { esc, $, $$, on, shortId, diffChars, renderDiff, fmtUsd, sourceWaitHtml } from "../lib/dom.js?v=67";
+import { store as bridgeStore } from "../lib/store.js?v=68";
+import { esc, $, $$, on, shortId, diffChars, renderDiff, fmtUsd, sourceWaitHtml } from "../lib/dom.js?v=68";
 import { gsap, reduced, enter, countTo, collapseOut, pulse } from "../lib/motion.js";
 import { fieldZh, fieldEn, RISK, failureZh } from "../lib/copy.js";
-import { card, orderedFields, pilotReasons, ledgerRef, confidenceOf } from "../lib/case.js?v=67";
-import { effectiveState, present } from "../lib/field-display.js?v=67";
+import { card, orderedFields, pilotReasons, ledgerRef, confidenceOf } from "../lib/case.js?v=68";
+import { effectiveState, present } from "../lib/field-display.js?v=68";
 
 export function mount(root, ctx, params = {}) {
   const store = ctx.store || bridgeStore;
@@ -21,7 +21,7 @@ export function mount(root, ctx, params = {}) {
       <div class="view-head">
         <div>
           <h1>Pilot <small>PILOT DECK</small></h1>
-          <p>Read the mail. Release it as CLEAR or stop it as HOLD. That stamp closes the case, and any remaining SI versus BL pair is locked into the Ledger so later mail with the same writings can be judged automatically. Chaos / broken mail has no pair to teach — it only leaves the queue.</p>
+          <p>Read the mail. Release it as CLEAR or stop it as HOLD. That stamp closes the case. Only contested SI versus BL pairs (UNCERTAIN / MISMATCH) are locked into the Ledger and may auto-close later mail with the same writings. Already-matched fields stay as court decided — they are not re-taught. Chaos / broken mail has no pair to teach — it only leaves the queue.</p>
         </div>
         <div class="view-actions">
           <button type="button" class="btn" id="pilot-ledger">Ledger rules <span class="arrow">→</span></button>
