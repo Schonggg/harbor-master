@@ -1,11 +1,11 @@
 // ⑥ Metrics + autonomy dial — false alarms as the hero number, confusion matrix,
 // field-level agreement, and a live what-if dial over the match-confidence floor.
-import { store as bridgeStore } from "../lib/store.js?v=63";
-import { esc, $, $$, on } from "../lib/dom.js?v=63";
+import { store as bridgeStore } from "../lib/store.js?v=64";
+import { esc, $, $$, on } from "../lib/dom.js?v=64";
 import { enter, countTo } from "../lib/motion.js";
 import { fieldZh, fieldEn, PRESETS } from "../lib/copy.js";
-import { sevenFields } from "../lib/case.js?v=63";
-import { SEVEN_FIELDS, effectiveState } from "../lib/field-display.js?v=63";
+import { sevenFields } from "../lib/case.js?v=64";
+import { SEVEN_FIELDS, effectiveState } from "../lib/field-display.js?v=64";
 
 export function mount(root, ctx) {
   const store = ctx.store || bridgeStore;

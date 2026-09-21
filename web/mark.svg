@@ -1,7 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 80" fill="currentColor">
-  <polygon points="2,40 42,28 42,52"/>
-  <polygon points="42,20 58,6 74,20"/>
-  <path fill-rule="evenodd" d="M42 20h32v24H42V20zm8 7h6v9h-6V27zm12 0h6v9h-6V27z"/>
-  <rect x="44" y="44" width="28" height="20"/>
-  <polygon points="32,64 80,64 86,80 26,80"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 88" fill="currentColor">
+  <!-- beam from lantern -->
+  <polygon points="0,22 34,14 34,34"/>
+  <!-- roof -->
+  <polygon points="34,4 50,0 66,4"/>
+  <!-- lantern pillars -->
+  <rect x="36" y="4" width="10" height="24"/>
+  <rect x="54" y="4" width="10" height="24"/>
+  <!-- gallery -->
+  <rect x="32" y="28" width="36" height="5"/>
+  <!-- shaft: wider at base -->
+  <polygon points="42,33 58,33 62,72 38,72"/>
+  <!-- base -->
+  <rect x="32" y="72" width="36" height="8"/>
 </svg>

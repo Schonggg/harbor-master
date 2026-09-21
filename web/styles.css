@@ -206,8 +206,8 @@ a { color: var(--text); }
   padding: 1.5rem 0;
 }
 .boot-logo {
-  width: 3.6rem;
-  height: 3.25rem;
+  width: 2.9rem;
+  height: 3.2rem;
   display: block;
   color: var(--paper);
   margin-bottom: 1.2rem;
@@ -282,7 +282,7 @@ body.is-live .shell { opacity: 1; }
 .brand {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.65rem;
   min-width: 0;
   flex-shrink: 0;
   text-decoration: none;
@@ -291,20 +291,35 @@ body.is-live .shell { opacity: 1; }
 .brand-mark,
 .boot-logo { fill: currentColor; overflow: visible; }
 .brand-mark {
-  width: 1.75rem;
-  height: 1.6rem;
+  width: 1.7rem;
+  height: 1.87rem;
   flex: none;
   display: block;
   color: var(--paper);
 }
+.brand-copy {
+  display: grid;
+  gap: 0.28rem;
+  min-width: 0;
+}
 .beacon { display: none; }
 .wordmark {
   font-family: var(--font-body);
-  font-weight: 500;
-  font-size: 0.92rem;
-  letter-spacing: 0.22em;
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.18em;
   line-height: 1;
   text-transform: uppercase;
+  white-space: nowrap;
+}
+.brand-tag {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.52rem;
+  letter-spacing: 0.16em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--text-3);
   white-space: nowrap;
 }
 .wordmark small { display: none; }
@@ -2455,6 +2470,7 @@ input[type="range"].dial::-moz-range-thumb {
   .docket-head { flex-wrap: wrap; }
   .docket-actions { width: 100%; justify-content: space-between; }
   .folder-hint { display: none; }
+  .brand-tag { display: none; }
   .docket-find { flex-wrap: wrap; }
   .top { grid-template-columns: 1fr auto; row-gap: 0.6rem; position: static; }
   .counters { grid-column: 1 / -1; }
