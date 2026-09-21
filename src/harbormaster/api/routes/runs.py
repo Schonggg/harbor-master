@@ -6,8 +6,16 @@ from harbormaster.graph.pipeline import run_from_request, start_corpus_job
 from harbormaster.ingest.loader_adapter import LoaderAdapter
 from harbormaster.ledger.store import LedgerStore
 from harbormaster.models import RunRequest, is_demo_email_id
+from harbormaster.report.reply_draft import english_reply_draft
 
 router = APIRouter()
+
+
+def _english_draft(payload: dict, card: dict | None = None, verdict: str | None = None) -> str | None:
+    v = verdict
+    if v is None and isinstance(card, dict):
+        v = card.get("verdict")
+    return english_reply_draft(payload, v)
 
 
 @router.get("/inbox")
@@ -146,7 +154,7 @@ def _board_payload(payload: dict) -> dict:
             "ai_pilot_note": card.get("ai_pilot_note") or "",
             "pilot_override": bool(card.get("pilot_override")),
             "pilot_override_note": card.get("pilot_override_note") or "",
-            "reply_draft": (card.get("reply_draft") or "")[:2500] or None,
+            "reply_draft": _english_draft(payload, card),
             "field_verdicts": fields,
             "lockable": lockable,
         },
@@ -193,5 +201,8 @@ def get_run(run_id: str):
     payload = dict(row.get("payload") or {})
     card = dict(payload.get("card") or {})
     card["reviewed"] = filed
+    draft = _english_draft(payload, card)
+    if draft:
+        card["reply_draft"] = draft
     payload["card"] = card
     return {**row, "reviewed": filed, "payload": payload}

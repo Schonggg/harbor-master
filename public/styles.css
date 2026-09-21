@@ -276,6 +276,8 @@ body.is-live .shell { opacity: 1; }
   display: flex;
   align-items: center;
   gap: 0.8rem;
+  min-width: 0;
+  flex-shrink: 0;
   text-decoration: none;
   color: inherit;
 }
@@ -287,6 +289,7 @@ body.is-live .shell { opacity: 1; }
   letter-spacing: 0.22em;
   line-height: 1;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 .wordmark small { display: none; }
 .est {
@@ -833,40 +836,53 @@ select.ctl, input.ctl {
   gap: 0.65rem;
   flex-shrink: 0;
 }
-.folder-link {
+.docket-actions .folder-link {
   display: inline-flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 0.45rem;
+  flex: 0 0 auto;
+  align-self: center;
+  align-items: baseline;
+  gap: 0.4rem;
+  height: auto;
+  width: max-content;
+  max-width: 100%;
+  min-height: 0;
   white-space: nowrap;
   border: 1px solid rgba(197, 212, 106, 0.42);
   background: #12140f;
   color: var(--paper);
   font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 600;
   letter-spacing: 0.08em;
-  padding: 0.52rem 0.85rem 0.48rem;
+  padding: 0.46rem 0.7rem 0.42rem;
   cursor: pointer;
   line-height: 1;
+  text-align: left;
 }
 .folder-link b {
   font-weight: 700;
   color: var(--hub-clear);
+  font-size: inherit;
+  line-height: inherit;
 }
 .folder-link .folder-action {
   color: rgba(239, 231, 212, 0.62);
   font-weight: 500;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  font-size: 0.66rem;
+  font-size: 0.64rem;
+}
+.folder-link .folder-action::before {
+  content: "·";
+  margin-right: 0.35rem;
+  letter-spacing: 0;
 }
 .folder-link:hover,
 .folder-link.on {
   border-color: var(--hub-clear);
   box-shadow: inset 3px 0 0 var(--hub-clear);
 }
-.folder-link.empty { opacity: 0.55; }
+.folder-link.is-zero { opacity: 0.55; }
 .folder-link:disabled { cursor: default; opacity: 0.45; }
 .folder-tools {
   display: flex;
@@ -1246,6 +1262,14 @@ select.ctl, input.ctl {
 }
 .empty h3 { font-size: 1.15rem; color: var(--text); }
 .empty p { max-width: 46ch; }
+/* .empty is the blank-docket card. Never let it restyle the Filed chip. */
+.docket-actions .folder-link {
+  display: inline-flex;
+  padding: 0.46rem 0.7rem 0.42rem;
+  border-style: solid;
+  gap: 0.4rem;
+  justify-items: unset;
+}
 
 .error-panel {
   padding: 1rem 1.2rem;

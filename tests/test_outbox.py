@@ -35,7 +35,9 @@ def test_clear_outbox_is_a_release_letter():
         bridge_verdict="CLEAR",
     )
     assert text
-    assert "proceed" in text.lower() or "放行" in text
+    assert "proceed" in text.lower()
+    assert "Operator name" in text
+    assert not any("\u4e00" <= ch <= "\u9fff" for ch in text)
 
 
 def test_pilot_outbox_asks_for_the_missing_file():
@@ -47,7 +49,8 @@ def test_pilot_outbox_asks_for_the_missing_file():
         bridge_verdict="PILOT",
     )
     assert text
-    assert "re-attach" in text.lower() or "补发" in text
+    assert "re-attach" in text.lower()
+    assert not any("\u4e00" <= ch <= "\u9fff" for ch in text)
 
 
 def test_outbox_from_run_does_not_change_defects():
@@ -65,3 +68,22 @@ def test_outbox_from_run_does_not_change_defects():
     draft = generate_outbox_from_run(run, "HOLD")
     assert draft
     assert run["payload"]["official"]["defect_fields"] == ["consignee"]
+
+
+def test_english_reply_draft_rewrites_legacy_chinese():
+    from harbormaster.report.reply_draft import english_reply_draft
+
+    payload = {
+        "card": {
+            "subject": "SI vs BL",
+            "verdict": "CLEAR",
+            "reply_draft": "关于本件：七项一致，可放行。\n\n[操作员姓名] / Harbormaster Desk",
+            "field_verdicts": [],
+        },
+        "official": {"category": "BL_COMPARISON", "status": "OK"},
+    }
+    text = english_reply_draft(payload, "CLEAR")
+    assert text
+    assert "proceed" in text.lower()
+    assert "Operator name" in text
+    assert not any("\u4e00" <= ch <= "\u9fff" for ch in text)

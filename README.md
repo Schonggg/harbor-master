@@ -102,7 +102,7 @@ Email -> Scout -> Reader -> Court -> Risk -> Report -> Bridge
 | **Pilot** | Human desk. Case-level CLEAR or HOLD always writes a **case stamp** on the Ledger (`email_id → CLEAR|HOLD`), and also teaches remaining SI/BL pairs so later identical writings replay automatically. Field-level **Lock in Ledger** writes one pair. Smash/empty mail still gets a case stamp so three human rulings show as three ledger rows. Older reviews that had no pair are backfilled the next time Ledger loads. The live pipeline does not auto-close PILOT. |
 | **Ledger** | Durable memory of Pilot work. Pair rules replay on new mail. Case stamps record every human CLEAR/HOLD even when there was no pair to teach. When new mail arrives, matching SI/BL writings replay pair rules so the same pair is not re-Piloted. Header CLEAR/HOLD/PILOT counts come from Postgres (pipeline stamps + human stamps + replay). Refresh reloads that ledger; it does not wipe it. |
 | **Filed folder** | Independent of Ledger and of `CaseCard`. A human mark (`reviewed_marks`) hides a card from the default Board docket after the operator has handled the files. Survives reload and re-AI. Hosted Refresh does not delete it; wiping the Supabase tables does. |
-| **Outbox** | Draft reply copy on CLEAR / HOLD / PILOT. Never auto-sent; never feeds `defect_fields`. |
+| **Outbox** | English-only draft reply on CLEAR / HOLD / PILOT. Never auto-sent; never feeds `defect_fields`. Legacy bilingual drafts are rewritten to English when served. |
 | **Reliability** | Retry, rules-only degrade, and Chaos injectors. Empty, corrupt, timeout, and garbled OCR paths force PILOT with a failure code. |
 | **Bridge** | Static ES-module UI over FastAPI. Six views, keyboard `1-6`. |
 

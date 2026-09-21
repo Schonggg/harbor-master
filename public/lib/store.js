@@ -5,7 +5,7 @@
 //   offline — replays captured payloads from demo-data.js and simulates the
 //             ledger/replay loop client-side so the demo still tells its story
 //             on a static HTTPS host.
-import { request, API_BASE, ApiError, discoverApiBase, EMAIL_GET_TIMEOUT_MS, markReviewed as postReviewed } from "./api.js?v=61";
+import { request, API_BASE, ApiError, discoverApiBase, EMAIL_GET_TIMEOUT_MS, markReviewed as postReviewed } from "./api.js?v=67";
 import { DEMO_RUNS, DEMO_EMAILS, DEMO_CHAOS, DEMO_AUTONOMY } from "./demo-data.js";
 
 const clone = (v) => (typeof structuredClone === "function" ? structuredClone(v) : JSON.parse(JSON.stringify(v)));
@@ -339,7 +339,12 @@ class Store extends EventTarget {
   }
   counts() {
     const c = { CLEAR: 0, HOLD: 0, PILOT: 0 };
-    for (const r of this.state.runs) c[r.payload?.card?.verdict || r.verdict] = (c[r.payload?.card?.verdict || r.verdict] || 0) + 1;
+    for (const r of this.state.runs) {
+      const id = String(r.email_id || "");
+      if (id.startsWith("chaos_") || id.startsWith("demo_")) continue;
+      const v = r.payload?.card?.verdict || r.verdict;
+      if (c[v] != null) c[v] += 1;
+    }
     return c;
   }
   ruleById(id) {
@@ -476,6 +481,8 @@ class Store extends EventTarget {
         const hosted = this.state.health?.inbox?.source === "supabase"
           || this.state.health?.db?.backend === "postgres";
         if (hosted) {
+          // Drop throwaway chaos_* smash rows so the berth returns to the official 520.
+          await request("/api/chaos/reset", { method: "POST", timeout: 45000 }).catch(() => null);
           await this.refresh();
           return { reason: "hosted ledger preserved" };
         }

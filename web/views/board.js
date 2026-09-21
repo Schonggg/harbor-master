@@ -1,11 +1,11 @@
 // ① Verdict board — Worldwide Hubs: three offices, then the docket.
-import { store as bridgeStore } from "../lib/store.js?v=66";
-import { esc, $, $$, on, shortId } from "../lib/dom.js?v=66";
+import { store as bridgeStore } from "../lib/store.js?v=67";
+import { esc, $, $$, on, shortId } from "../lib/dom.js?v=67";
 import { enter, countTo, magnetize, tiltify, scrollToY } from "../lib/motion.js?v=18";
 import { scoutZh, VERDICT, fieldZh } from "../lib/copy.js";
-import { card, orderedFields, summarize, courtFields } from "../lib/case.js?v=66";
-import { highlightText, matchesRun, rankRun } from "../lib/docket-search.js?v=66";
-import { SEVEN_FIELDS, effectiveState } from "../lib/field-display.js?v=66";
+import { card, orderedFields, summarize, courtFields } from "../lib/case.js?v=67";
+import { highlightText, matchesRun, rankRun } from "../lib/docket-search.js?v=67";
+import { SEVEN_FIELDS, effectiveState } from "../lib/field-display.js?v=67";
 
 const HUBS = [
   {
@@ -435,7 +435,7 @@ export function mount(root, ctx) {
         return `
         <article class="mail-card pending" data-email="${esc(r.email_id)}" tabindex="0">
           <div class="row">
-            <span class="verdict-tag">QUEUED<em>待审</em></span>
+            <span class="verdict-tag">QUEUED<em>Pending</em></span>
             <span class="chip">${r.attachments || 0} attachments</span>
           </div>
           <h3 title="${esc(r.subject || r.email_id)}">${state.query.trim() ? highlightText(r.subject || r.email_id, state.query) : esc(r.subject || r.email_id)}</h3>
