@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 80" fill="currentColor">
+  <polygon points="2,40 42,28 42,52"/>
+  <polygon points="42,20 58,6 74,20"/>
+  <path fill-rule="evenodd" d="M42 20h32v24H42V20zm8 7h6v9h-6V27zm12 0h6v9h-6V27z"/>
+  <rect x="44" y="44" width="28" height="20"/>
+  <polygon points="32,64 80,64 86,80 26,80"/>
+</svg>

@@ -1,10 +1,10 @@
 // ④ Ledger — every rule a pilot ever taught the system, with provenance and revoke.
-import { store as bridgeStore } from "../lib/store.js?v=62";
-import { esc, $, $$, on, shortId, fmtTime } from "../lib/dom.js?v=62";
+import { store as bridgeStore } from "../lib/store.js?v=63";
+import { esc, $, $$, on, shortId, fmtTime } from "../lib/dom.js?v=63";
 import { enter } from "../lib/motion.js";
 import { fieldZh } from "../lib/copy.js";
-import { card, orderedFields, ledgerRef } from "../lib/case.js?v=62";
-import { present, effectiveState } from "../lib/field-display.js?v=62";
+import { card, orderedFields, ledgerRef } from "../lib/case.js?v=63";
+import { present, effectiveState } from "../lib/field-display.js?v=63";
 
 export function mount(root, ctx) {
   const store = ctx.store || bridgeStore;

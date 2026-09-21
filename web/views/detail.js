@@ -1,11 +1,11 @@
 // Case drawer: verdict hero, seven-field comparison, evidence with in-place
 // highlighting of the original message, and hand-offs to court / pilot.
-import { store as bridgeStore } from "../lib/store.js?v=62";
-import { esc, $, $$, on, shortId, fmtUsd, diffChars, renderDiff, reEscape, sourceWaitHtml } from "../lib/dom.js?v=62";
+import { store as bridgeStore } from "../lib/store.js?v=63";
+import { esc, $, $$, on, shortId, fmtUsd, diffChars, renderDiff, reEscape, sourceWaitHtml } from "../lib/dom.js?v=63";
 import { enter } from "../lib/motion.js";
 import { fieldZh, fieldEn, scoutZh, VERDICT, STATE, RISK, strategyZh, failureZh } from "../lib/copy.js";
-import { card, sevenFields, extraFields, orderedFields, ledgerRef, confidenceOf, pilotReasons } from "../lib/case.js?v=62";
-import { pairView, present, effectiveState, valueFromBody } from "../lib/field-display.js?v=62";
+import { card, sevenFields, extraFields, orderedFields, ledgerRef, confidenceOf, pilotReasons } from "../lib/case.js?v=63";
+import { pairView, present, effectiveState, valueFromBody } from "../lib/field-display.js?v=63";
 
 export function renderDetail(root, runId, ctx) {
   const store = ctx.store || bridgeStore;

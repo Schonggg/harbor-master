@@ -61,7 +61,7 @@ Of the 220 comparison cases: **154 OK**, **46 MISMATCH**, **20 NEEDS_REVIEW**. N
 
 **Reader.** Image-only PDFs go to VisionParser. A short labelled PDF still uses PdfParser (`pdf_has_text` min 1 character) so the 220-cell format matrix stays green. DOCX tables flatten to `label: value`. Party names strip `(Non-Negotiable)` / pipe-address tails before L5 exact compare.
 
-**Bridge.** Board **Find** (`/`): email number or keywords. Case **Find in source** jumps to the email body or, when the value came from an SI/BL file, the attachment excerpt under the body. Court has no 0.5×/1×/2× playback chrome (Replay / `R` still re-runs the hearing). Pilot CLEAR/HOLD always writes a Ledger row (a case stamp, plus any SI/BL pairs so later mail can replay). Opening Ledger also restores older human CLEAR/HOLD stamps that were closed before case stamps existed, so three reviews stay three rows. Chaos smash is a throwaway `chaos_*` row, rules-only — it does not rewrite an official CLEAR mail. Board **filed folder**: a checkbox on each card files it off the open docket (`reviewed_marks` in Postgres). Closing the site, adding mail, or re-running AI does not unfile it. Cache lockstep: `app.js?v=62` / `store.js?v=62`, `styles.css?v=42`. The Board **Filed** chip is a one-line control next to Refresh — it must not reuse the `.empty` docket card styles.
+**Bridge.** Board **Find** (`/`): email number or keywords. Case **Find in source** jumps to the email body or, when the value came from an SI/BL file, the attachment excerpt under the body. Court has no 0.5×/1×/2× playback chrome (Replay / `R` still re-runs the hearing). Pilot CLEAR/HOLD always writes a Ledger row (a case stamp, plus any SI/BL pairs so later mail can replay). Opening Ledger also restores older human CLEAR/HOLD stamps that were closed before case stamps existed, so three reviews stay three rows. Chaos smash is a throwaway `chaos_*` row, rules-only — it does not rewrite an official CLEAR mail. Board **filed folder**: a checkbox on each card files it off the open docket (`reviewed_marks` in Postgres). Closing the site, adding mail, or re-running AI does not unfile it. Cache lockstep: `app.js?v=63` / `store.js?v=63`, `styles.css?v=44`. Header brand is the lighthouse mark plus **HARBORMASTER**. The Board **Filed** chip is a one-line control next to Refresh — it must not reuse the `.empty` docket card styles.
 
 **Tests.** `py -3 -m pytest -q --ignore=tests/test_seed_robustness.py --ignore=tests/test_official_score.py --ignore=tests/test_scanned_pdf.py` is **144 passed**.
 
@@ -146,7 +146,7 @@ Header buttons are **Refresh** and **Load inbox**. Load inbox fills at most one 
 
 **Board cards.** Mild mouse-follow tilt. Every view must import `store.js` with the same `?v=` as `app.js` in `web/index.html`. A mismatch creates two stores and the board looks empty while the header still counts 520.
 
-**Cache.** After a UI change, bump that `?v=` lockstep (`app.js` / `store.js` currently `?v=62`, `styles.css` `?v=42`), run `py -3 scripts/vercel_build.py`, then deploy. Do not hard-refresh only `index.html`.
+**Cache.** After a UI change, bump that `?v=` lockstep (`app.js` / `store.js` currently `?v=63`, `styles.css` `?v=44`), run `py -3 scripts/vercel_build.py`, then deploy. Do not hard-refresh only `index.html`.
 
 The frontend (`web/`) is static - no build step. Three.js and GSAP are vendored. If the API is unreachable, the Bridge falls back to **offline replay** from `web/lib/demo-data.js`. That 14-email snapshot is **not** mixed into the live 520 board.
 

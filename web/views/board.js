@@ -1,11 +1,11 @@
 // ① Verdict board — Worldwide Hubs: three offices, then the docket.
-import { store as bridgeStore } from "../lib/store.js?v=62";
-import { esc, $, $$, on, shortId } from "../lib/dom.js?v=62";
-import { enter, countTo, magnetize, tiltify, scrollToY } from "../lib/motion.js?v=16";
+import { store as bridgeStore } from "../lib/store.js?v=63";
+import { esc, $, $$, on, shortId } from "../lib/dom.js?v=63";
+import { enter, countTo, magnetize, tiltify, scrollToY } from "../lib/motion.js?v=17";
 import { scoutZh, VERDICT, fieldZh } from "../lib/copy.js";
-import { card, orderedFields, summarize, courtFields } from "../lib/case.js?v=62";
-import { highlightText, matchesRun, rankRun } from "../lib/docket-search.js?v=62";
-import { SEVEN_FIELDS, effectiveState } from "../lib/field-display.js?v=62";
+import { card, orderedFields, summarize, courtFields } from "../lib/case.js?v=63";
+import { highlightText, matchesRun, rankRun } from "../lib/docket-search.js?v=63";
+import { SEVEN_FIELDS, effectiveState } from "../lib/field-display.js?v=63";
 
 const HUBS = [
   {

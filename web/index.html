@@ -10,7 +10,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500&family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./styles.css?v=42" />
+  <link rel="stylesheet" href="./styles.css?v=44" />
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
   <script type="importmap">
   { "imports": { "three": "./vendor/three.module.min.js" } }
   </script>
@@ -28,6 +29,13 @@
 
   <div class="boot" id="boot" aria-hidden="true">
     <div class="boot-inner">
+      <svg class="boot-logo" viewBox="0 0 88 80" aria-hidden="true">
+        <polygon points="2,40 42,28 42,52"/>
+        <polygon points="42,20 58,6 74,20"/>
+        <path fill-rule="evenodd" d="M42 20h32v24H42V20zm8 7h6v9h-6V27zm12 0h6v9h-6V27z"/>
+        <rect x="44" y="44" width="28" height="20"/>
+        <polygon points="32,64 80,64 86,80 26,80"/>
+      </svg>
       <p class="boot-kicker">OFFICES</p>
       <h1 class="boot-mark">Three<br><em>verdicts.</em></h1>
       <p class="boot-line">One standard of work.</p>
@@ -37,6 +45,13 @@
   <div class="shell">
     <header class="top" id="top">
       <a class="brand" href="#/board" aria-label="Harbormaster Bridge">
+        <svg class="brand-mark" viewBox="0 0 88 80" aria-hidden="true">
+          <polygon points="2,40 42,28 42,52"/>
+          <polygon points="42,20 58,6 74,20"/>
+          <path fill-rule="evenodd" d="M42 20h32v24H42V20zm8 7h6v9h-6V27zm12 0h6v9h-6V27z"/>
+          <rect x="44" y="44" width="28" height="20"/>
+          <polygon points="32,64 80,64 86,80 26,80"/>
+        </svg>
         <span class="wordmark">HARBORMASTER</span>
       </a>
       <p class="est">EST. 2026 — WORLDWIDE</p>
@@ -76,6 +91,6 @@
   <div class="toast-stack" id="toasts" aria-live="assertive"></div>
 
   <noscript>Harbormaster Bridge needs JavaScript.</noscript>
-  <script type="module" src="./app.js?v=62"></script>
+  <script type="module" src="./app.js?v=63"></script>
 </body>
 </html>
