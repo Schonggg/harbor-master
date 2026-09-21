@@ -509,14 +509,14 @@ class Store extends EventTarget {
         const out = await request("/api/board/rebuild", {
           method: "POST",
           timeout: 90000,
-          body: { confirm: true, use_ai: true },
+          body: { confirm: true, use_ai: false },
         });
         this._pendingVerdicts?.clear?.();
         this._offline = { ledger: [], reviews: [] };
         this.set({ runs: [], ledger: [], lastChaos: null, job: null }, "reset");
         await this.refresh();
         const queued = out?.queued || 0;
-        if (queued > 0) this.startFill({ useAi: true });
+        if (queued > 0) this.startFill({ useAi: false });
         return out;
       }
       this._offline = { ledger: [], reviews: [] };

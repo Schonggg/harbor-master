@@ -199,7 +199,7 @@ async function reset() {
     return;
   }
   const ok = window.confirm(
-    "Rebuild the whole board?\n\nThis will:\n• Delete every Ledger rule and human Pilot CLEAR/HOLD\n• Re-judge all 520 official emails with AI (no Ledger memory)\n• Restore CLEAR / HOLD / PILOT to the first AI pass\n\nInbox emails stay. This cannot be undone.\n\nContinue?",
+    "Rebuild the whole board?\n\nThis will:\n• Delete every Ledger rule and human Pilot CLEAR/HOLD\n• Re-judge all 520 official emails from scratch (no Ledger memory)\n• Restore CLEAR / HOLD / PILOT to the first pipeline pass\n\nInbox emails stay. This cannot be undone.\n\nContinue?",
   );
   if (!ok) return;
   const b = $("#btn-reset");
