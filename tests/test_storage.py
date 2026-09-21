@@ -182,6 +182,84 @@ def test_is_demo_email_id():
     assert is_demo_email_id(None) is False
 
 
+def test_is_chaos_email_id():
+    from harbormaster.models import is_chaos_email_id
+
+    assert is_chaos_email_id("chaos_empty_email") is True
+    assert is_chaos_email_id("email_001") is False
+    assert is_chaos_email_id(None) is False
+
+
+def test_prune_duplicate_runs_keeps_newest(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "")
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "harbormaster.db"))
+    clear_caches()
+    store = LedgerStore()
+    store.save_run("run-new", "case-new", "email_001", "CLEAR", {"n": 2}, created_at="2026-09-21T12:00:00+00:00")
+    with store._connect() as conn:
+        conn.execute(
+            "INSERT INTO case_runs (run_id, case_id, email_id, verdict, payload_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            ("run-old", "case-old", "email_001", "PILOT", "{}", "2026-09-21T11:00:00+00:00"),
+        )
+    assert store.prune_duplicate_runs() == 1
+    rows = store.list_runs()
+    assert len(rows) == 1
+    assert rows[0]["run_id"] == "run-new"
+    assert rows[0]["verdict"] == "CLEAR"
+
+
+def test_replayer_does_not_overwrite_pilot_override(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "")
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "harbormaster.db"))
+    clear_caches()
+    store = LedgerStore()
+    from harbormaster.ledger.promoter import Promoter
+    from harbormaster.ledger.replay import Replayer
+    from harbormaster.models import PilotDecision, PilotReview
+
+    store.save_run(
+        "run-human",
+        "case-human",
+        "email_009",
+        "CLEAR",
+        {
+            "card": {
+                "verdict": "CLEAR",
+                "pilot_override": True,
+                "field_verdicts": [
+                    {
+                        "field": "shipper",
+                        "state": "UNCERTAIN",
+                        "charge": {
+                            "left": {"raw_value": "ACME CO"},
+                            "right": {"raw_value": "ACME COMPANY"},
+                        },
+                    }
+                ],
+            }
+        },
+    )
+    rule = Promoter(store).promote(
+        PilotReview(
+            case_id="case-other",
+            field="shipper",
+            decision=PilotDecision.ACCEPT_AS_MATCH,
+            promote_to_ledger=True,
+            reviewer="pilot",
+        ),
+        "ACME CO",
+        "ACME COMPANY",
+    )
+    assert rule
+    Replayer(store).replay(rule.rule_id)
+    row = store.get_run("run-human")
+    assert row["verdict"] == "CLEAR"
+    assert row["payload"]["card"]["verdict"] == "CLEAR"
+    assert row["payload"]["card"]["field_verdicts"][0]["state"] == "MATCH"
+
+
 def test_s3_canonical_uri():
     assert canonical_uri("/bucket/backups/x.db") == "/bucket/backups/x.db"
     assert canonical_uri("bucket/a b") == "/bucket/a%20b"

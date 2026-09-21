@@ -333,6 +333,34 @@ class LedgerStore:
                 n += int(getattr(cur, "rowcount", 0) or 0)
         return n
 
+    def prune_duplicate_runs(self) -> int:
+        """Keep the newest case_runs row per email_id. Orphans inflate raw DB counts past 520."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT run_id, email_id, created_at FROM case_runs ORDER BY created_at DESC"
+            ).fetchall()
+        keep: set[str] = set()
+        drop: list[str] = []
+        seen: set[str] = set()
+        for r in rows:
+            eid = str(r["email_id"] or "")
+            rid = str(r["run_id"] or "")
+            if not eid or not rid:
+                continue
+            if eid in seen:
+                drop.append(rid)
+                continue
+            seen.add(eid)
+            keep.add(rid)
+        if not drop:
+            return 0
+        n = 0
+        with self._connect() as conn:
+            for rid in drop:
+                cur = conn.execute("DELETE FROM case_runs WHERE run_id = ?", (rid,))
+                n += int(getattr(cur, "rowcount", 0) or 0)
+        return n
+
     def list_runs(self) -> list[dict]:
         with self._connect() as conn:
             sql = "SELECT run_id, case_id, email_id, verdict, payload_json, created_at FROM case_runs"

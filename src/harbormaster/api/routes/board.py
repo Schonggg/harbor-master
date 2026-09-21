@@ -7,6 +7,7 @@ from collections import Counter
 from fastapi import APIRouter, Body
 
 from harbormaster.ledger.store import LedgerStore
+from harbormaster.models import is_chaos_email_id, is_demo_email_id
 
 router = APIRouter()
 
@@ -24,7 +25,12 @@ def board():
             card["email_id"] = eid
         card["reviewed"] = eid in reviewed_ids
         cards.append(card)
-    counts = Counter(r.get("verdict") for r in runs)
+    # Header / hub tallies are the official berth only — smash rows stay on Chaos / Pilot filters.
+    official = [
+        r for r in runs
+        if not is_chaos_email_id(r.get("email_id")) and not is_demo_email_id(r.get("email_id"))
+    ]
+    counts = Counter(r.get("verdict") for r in official)
     return {
         "cards": cards,
         "runs": runs,

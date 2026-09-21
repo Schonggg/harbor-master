@@ -63,11 +63,17 @@ COMPARE_FIELD_SET = frozenset(COMPARE_FIELDS)
 # Frontend demo still extracts vessel/voyage; official scoring does not.
 DEMO_EXTRA_FIELDS: tuple[str, ...] = ("vessel_voyage", "gross_weight")
 DEMO_EMAIL_PREFIX = "demo_"
+CHAOS_EMAIL_PREFIX = "chaos_"
 
 
 def is_demo_email_id(email_id: object | None) -> bool:
     """True for the 14-email replay fixtures. Official SDOC ids are `email_NNN`."""
     return str(email_id or "").startswith(DEMO_EMAIL_PREFIX)
+
+
+def is_chaos_email_id(email_id: object | None) -> bool:
+    """True for throwaway Chaos smash rows (`chaos_*`). Not part of the official 520."""
+    return str(email_id or "").startswith(CHAOS_EMAIL_PREFIX)
 
 
 def canonical_field_name(name: str) -> str:

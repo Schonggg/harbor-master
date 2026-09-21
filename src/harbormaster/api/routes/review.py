@@ -144,16 +144,7 @@ def set_case_verdict(body: CaseVerdictBody):
     store = LedgerStore()
     payload = dict(run.get("payload") or {})
     card = dict(payload.get("card") or {})
-    rules, replayed = _promote_pairs_for_verdict(
-        store,
-        run.get("case_id") or body.case_id,
-        card,
-        body,
-        email_id=str(run.get("email_id") or ""),
-    )
-    fresh = _find_run(body.case_id) or run
-    payload = dict(fresh.get("payload") or payload)
-    card = dict(payload.get("card") or card)
+    # Stamp the board first. Promote/replay can be slow; a timeout must not leave the mail in PILOT.
     card["verdict"] = body.verdict
     card["pilot_override"] = True
     card["pilot_override_by"] = body.reviewer
@@ -171,14 +162,21 @@ def set_case_verdict(body: CaseVerdictBody):
             pass
     from harbormaster.report.reply_draft import generate_outbox_from_run
 
-    draft = generate_outbox_from_run({**fresh, "payload": payload}, body.verdict)
+    draft = generate_outbox_from_run({**run, "payload": payload}, body.verdict)
     if draft:
         card["reply_draft"] = draft
         payload["card"] = card
-    store.save_run(fresh["run_id"], fresh["case_id"], fresh["email_id"], body.verdict, payload)
+    store.save_run(run["run_id"], run["case_id"], run["email_id"], body.verdict, payload)
+    rules, replayed = _promote_pairs_for_verdict(
+        store,
+        run.get("case_id") or body.case_id,
+        card,
+        body,
+        email_id=str(run.get("email_id") or ""),
+    )
     return {
-        "case_id": fresh["case_id"],
-        "email_id": fresh["email_id"],
+        "case_id": run["case_id"],
+        "email_id": run["email_id"],
         "verdict": body.verdict,
         "reviewer": body.reviewer,
         "reply_draft": draft,

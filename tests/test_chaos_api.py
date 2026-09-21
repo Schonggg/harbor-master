@@ -51,6 +51,20 @@ def test_chaos_reset_drops_smash_rows(tmp_path, monkeypatch):
     assert ids == {"email_001"}
 
 
+def test_board_counts_ignore_chaos_smash_rows(tmp_path, monkeypatch):
+    store = _iso(tmp_path, monkeypatch)
+    store.save_run("run-a", "case-a", "email_001", "CLEAR", {"card": {"verdict": "CLEAR", "email_id": "email_001"}})
+    store.save_run("run-b", "case-b", "email_002", "PILOT", {"card": {"verdict": "PILOT", "email_id": "email_002"}})
+    trigger_chaos("empty_email", None)
+    monkeypatch.delenv("HARBORMASTER_API_KEY", raising=False)
+    from harbormaster.api.main import app
+    from fastapi.testclient import TestClient
+
+    body = TestClient(app).get("/api/board").json()
+    assert body["counts"] == {"CLEAR": 1, "HOLD": 0, "PILOT": 1}
+    assert any(r["email_id"] == "chaos_empty_email" for r in body["runs"])
+
+
 def test_purge_email_prefix_refuses_official_shape(tmp_path, monkeypatch):
     store = _iso(tmp_path, monkeypatch)
     store.save_run("run-a", "case-a", "email_001", "CLEAR", {})

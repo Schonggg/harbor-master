@@ -70,8 +70,9 @@ def chaos_types():
 def reset_chaos():
     store = LedgerStore()
     dropped = store.purge_email_prefix(_SMASH_PREFIX)
+    pruned = store.prune_duplicate_runs()
     restored = _restore_injected_official(store)
-    return {"dropped": dropped, "restored": restored}
+    return {"dropped": dropped, "pruned": pruned, "restored": restored}
 
 
 @router.post("/chaos/{chaos_type}")

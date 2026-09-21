@@ -45,13 +45,16 @@ class Replayer:
                     fv["rationale"] = f"ledger replay:{rule.rule_id}"
                     changed = True
             if changed:
-                states = [fv.get("state") for fv in field_verdicts]
-                if CourtState.MISMATCH.value in states:
-                    card["verdict"] = CaseVerdict.HOLD.value
-                elif CourtState.UNCERTAIN.value in states:
-                    card["verdict"] = CaseVerdict.PILOT.value
-                else:
-                    card["verdict"] = CaseVerdict.CLEAR.value
+                # Human Pilot stamps are final. Pair replay may still paint fields, but must not
+                # roll the case back to PILOT when UNCERTAIN fields remain.
+                if not card.get("pilot_override"):
+                    states = [fv.get("state") for fv in field_verdicts]
+                    if CourtState.MISMATCH.value in states:
+                        card["verdict"] = CaseVerdict.HOLD.value
+                    elif CourtState.UNCERTAIN.value in states:
+                        card["verdict"] = CaseVerdict.PILOT.value
+                    else:
+                        card["verdict"] = CaseVerdict.CLEAR.value
                 payload["card"] = card
                 self.store.save_run(
                     run["run_id"], run["case_id"], run["email_id"], card["verdict"], payload
