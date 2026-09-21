@@ -32,7 +32,6 @@ export function playBoot(root, onDone) {
     return;
   }
   const mark = root.querySelector(".boot-mark");
-  const logo = root.querySelector(".boot-logo");
   const lines = root.querySelectorAll(".boot-line");
   const tl = g.timeline({
     defaults: { ease: "power3.out" },
@@ -47,8 +46,7 @@ export function playBoot(root, onDone) {
     },
   });
   g.set(root, { opacity: 1 });
-  if (logo) tl.fromTo(logo, { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5 });
-  if (mark) tl.fromTo(mark, { y: 36, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9 }, "-=0.15");
+  if (mark) tl.fromTo(mark, { y: 36, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9 });
   if (lines.length) tl.fromTo(lines, { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, stagger: 0.1 }, "-=0.4");
 }
 
