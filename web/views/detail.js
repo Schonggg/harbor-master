@@ -1,11 +1,11 @@
 // Case drawer: verdict hero, seven-field comparison, evidence with in-place
 // highlighting of the original message, and hand-offs to court / pilot.
-import { store as bridgeStore } from "../lib/store.js?v=69";
-import { esc, $, $$, on, shortId, fmtUsd, diffChars, renderDiff, reEscape, sourceWaitHtml } from "../lib/dom.js?v=69";
+import { store as bridgeStore } from "../lib/store.js?v=70";
+import { esc, $, $$, on, shortId, fmtUsd, diffChars, renderDiff, reEscape, sourceWaitHtml } from "../lib/dom.js?v=70";
 import { enter } from "../lib/motion.js";
 import { fieldZh, fieldEn, scoutZh, VERDICT, STATE, RISK, strategyZh, failureZh } from "../lib/copy.js";
-import { card, sevenFields, extraFields, orderedFields, ledgerRef, confidenceOf, pilotReasons } from "../lib/case.js?v=69";
-import { pairView, present, effectiveState, valueFromBody } from "../lib/field-display.js?v=69";
+import { card, sevenFields, extraFields, orderedFields, ledgerRef, confidenceOf, pilotReasons } from "../lib/case.js?v=70";
+import { pairView, present, effectiveState, valueFromBody } from "../lib/field-display.js?v=70";
 
 export function renderDetail(root, runId, ctx) {
   const store = ctx.store || bridgeStore;
@@ -50,6 +50,7 @@ export function renderDetail(root, runId, ctx) {
           ${v === "PILOT" ? `
             <button type="button" class="btn btn-lg btn-clear" data-case-verdict="CLEAR">Release · CLEAR</button>
             <button type="button" class="btn btn-lg btn-hold" data-case-verdict="HOLD">Stop · HOLD</button>` : ""}
+          ${c.pilot_override && (v === "CLEAR" || v === "HOLD") ? `<button type="button" class="btn btn-pilot" data-reopen-pilot>Reopen to Pilot</button>` : ""}
           ${charged.length ? `<button type="button" class="btn btn-primary" data-go-court>Open court, full argument <span class="arrow">→</span></button>` : ""}
           ${v === "PILOT" ? `<button type="button" class="btn btn-pilot" data-go-pilot>Open on Pilot <span class="arrow">→</span></button>` : ""}
         </div>
@@ -103,6 +104,18 @@ export function renderDetail(root, runId, ctx) {
   });
   on(root, "click", "[data-go-court]", () => { ctx.closeDetail(); ctx.navigate("court", { run: run.run_id, field: charged[0]?.field }); });
   on(root, "click", "[data-go-pilot]", () => { ctx.closeDetail(); ctx.navigate("pilot", { run: run.run_id }); });
+  on(root, "click", "[data-reopen-pilot]", async (_, el) => {
+    el.disabled = true;
+    try {
+      await store.reopenToPilot({ caseId: run.case_id || run.run_id });
+      ctx.toast("Mail reopened to Pilot", "ok");
+      ctx.closeDetail();
+      ctx.navigate("pilot", { run: run.run_id });
+    } catch (e) {
+      ctx.toast(e.message, "err");
+      el.disabled = false;
+    }
+  });
   on(root, "click", "[data-case-verdict]", async (_, el) => {
     const verdict = el.dataset.caseVerdict;
     try {

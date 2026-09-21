@@ -1,15 +1,15 @@
 // Harbormaster Bridge — shell: routing, store wiring, header, drawer, toasts.
-import { store } from "./lib/store.js?v=69";
+import { store } from "./lib/store.js?v=70";
 import { mountScene, scene } from "./lib/scene.js?v=13";
-import { $, $$, h, esc } from "./lib/dom.js?v=69";
+import { $, $$, h, esc } from "./lib/dom.js?v=70";
 import { gsap, reduced, swapView, countTo, pulse, mountSpotlight, playBoot, mountParallax } from "./lib/motion.js?v=18";
-import { renderDetail } from "./views/detail.js?v=69";
-import * as board from "./views/board.js?v=69";
-import * as court from "./views/court.js?v=69";
-import * as ledger from "./views/ledger.js?v=69";
-import * as chaos from "./views/chaos.js?v=69";
-import * as metrics from "./views/metrics.js?v=69";
-import * as pilot from "./views/pilot.js?v=69";
+import { renderDetail } from "./views/detail.js?v=70";
+import * as board from "./views/board.js?v=70";
+import * as court from "./views/court.js?v=70";
+import * as ledger from "./views/ledger.js?v=70";
+import * as chaos from "./views/chaos.js?v=70";
+import * as metrics from "./views/metrics.js?v=70";
+import * as pilot from "./views/pilot.js?v=70";
 
 const VIEWS = { board, court, pilot, ledger, chaos, metrics };
 const ORDER = Object.keys(VIEWS);
@@ -198,12 +198,26 @@ async function reset() {
     toast("Still connecting to the hosted ledger…", "", 4000);
     return;
   }
+  const ok = window.confirm(
+    "Rebuild the whole board?\n\nThis will:\n• Delete every Ledger rule and human Pilot CLEAR/HOLD\n• Re-judge all 520 official emails with AI (no Ledger memory)\n• Restore CLEAR / HOLD / PILOT to the first AI pass\n\nInbox emails stay. This cannot be undone.\n\nContinue?",
+  );
+  if (!ok) return;
   const b = $("#btn-reset");
   b.disabled = true;
+  toast("Wiping Ledger and re-judging the official inbox…", "", 8000);
   try {
     const out = await store.reset();
     scene.setMood("calm");
-    toast(out?.reason === "hosted ledger preserved" ? "Official ledger kept · board refreshed" : "Board refreshed", "ok");
+    const queued = out?.queued || 0;
+    toast(
+      queued
+        ? `Board wiped · re-judging ${queued} emails with AI (header counts will climb)`
+        : "Board rebuilt from AI",
+      "ok",
+      9000,
+    );
+    pulse($(".counters"), 1.04);
+    if (current.name !== "board") navigate("board");
   } catch (e) { toast(`Refresh failed: ${e.message}`, "err"); }
   b.disabled = false;
 }

@@ -8,7 +8,7 @@ import threading
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Body
 
 from harbormaster.config import data_dir, is_serverless
 from harbormaster.graph.pipeline import run_from_request, start_corpus_job
@@ -112,8 +112,12 @@ def demo_reset():
 
 
 @router.post("/demo/seed")
-def demo_seed():
-    """Hosted: paint existing ledger, then judge at most one missing email per call."""
+def demo_seed(payload: dict = Body(default={})):
+    """Hosted: paint existing ledger, then judge at most one missing email per call.
+
+    Body may include use_ai=true to re-judge with the LLM (ledger still applies if present).
+    """
+    use_ai = bool((payload or {}).get("use_ai"))
     loader = LoaderAdapter()
     store = LedgerStore()
     hosted = _hosted(store)
@@ -121,9 +125,10 @@ def demo_seed():
         store.purge_demo_runs()
         store.purge_email_prefix("chaos_")
         store.prune_duplicate_runs()
-        from harbormaster.ledger.repair import repair_ledger_closures
+        if not use_ai:
+            from harbormaster.ledger.repair import repair_ledger_closures
 
-        repair_ledger_closures(store)
+            repair_ledger_closures(store)
     official = store.list_inbox_ids() or loader.list_email_ids(source="official")
     official = [eid for eid in official if not is_demo_email_id(eid)]
     have_ids = store.list_run_email_ids()
@@ -133,7 +138,7 @@ def demo_seed():
         seeded: list[dict] = []
         for email_id in missing[:SERVERLESS_BATCH]:
             try:
-                seeded.append(_run_email(email_id, rules_only=True))
+                seeded.append(_run_email(email_id, rules_only=not use_ai))
             except Exception:
                 break
         return {
@@ -144,6 +149,7 @@ def demo_seed():
             "have": len(have_ids) + len(seeded),
             "demo": 0,
             "llm_queued": 0,
+            "use_ai": use_ai,
             "inbox": {"ok": True, "email_count": len(official), "source": "supabase" if store.backend == "postgres" else "local"},
             "reason": "batch" if missing else "hosted ledger already filled",
         }

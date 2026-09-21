@@ -504,6 +504,80 @@ def test_replayer_ignores_inactive_rules(tmp_path, monkeypatch):
     assert store.get_run("run-a")["verdict"] == "PILOT"
 
 
+def test_reopen_to_pilot_revokes_case_stamp_and_pairs(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "")
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "harbormaster.db"))
+    clear_caches()
+    store = LedgerStore()
+    pair = {
+        "field": "shipper",
+        "state": "UNCERTAIN",
+        "charge": {
+            "left": {"raw_value": "ACME PTE LTD"},
+            "right": {"raw_value": "ACME Pte. Ltd."},
+        },
+    }
+    store.save_run(
+        "run-teach",
+        "case-teach",
+        "email_teach",
+        "PILOT",
+        {"card": {"verdict": "PILOT", "field_verdicts": [pair]}},
+    )
+    store.save_run(
+        "run-twin",
+        "case-twin",
+        "email_twin",
+        "PILOT",
+        {"card": {"verdict": "PILOT", "field_verdicts": [dict(pair)]}},
+    )
+    from harbormaster.api.routes.review import CaseVerdictBody, ReopenBody, reopen_to_pilot, set_case_verdict
+
+    set_case_verdict(CaseVerdictBody(case_id="case-teach", verdict="CLEAR", reviewer="pilot"))
+    twin = store.get_run_by_ref("case-twin")
+    assert twin["verdict"] == "CLEAR"
+    out = reopen_to_pilot(ReopenBody(case_id="case-teach"))
+    assert out["verdict"] == "PILOT"
+    assert out["revoked"]
+    taught = store.get_run_by_ref("case-teach")
+    assert taught["verdict"] == "PILOT"
+    assert taught["payload"]["card"].get("pilot_override") is False
+    twin = store.get_run_by_ref("case-twin")
+    assert twin["verdict"] == "PILOT"
+
+
+def test_wipe_board_for_rebuild_keeps_inbox(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", "")
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "harbormaster.db"))
+    clear_caches()
+    store = LedgerStore()
+    store.save_inbox_email("email_001", subject="keep me", body_text="hello")
+    store.save_run("run-1", "case-1", "email_001", "CLEAR", {"card": {"pilot_override": True, "verdict": "CLEAR"}})
+    from harbormaster.models import PilotDecision, PilotReview
+    from harbormaster.ledger.promoter import Promoter
+
+    Promoter(store).promote(
+        PilotReview(
+            case_id="case-1",
+            field="case",
+            decision=PilotDecision.ACCEPT_AS_MATCH,
+            promote_to_ledger=True,
+            reviewer="pilot",
+            note="case CLEAR",
+        ),
+        "email_001",
+        "CLEAR",
+    )
+    wiped = store.wipe_board_for_rebuild()
+    assert wiped["case_runs"] >= 1
+    assert wiped["ledger_rules"] >= 1
+    assert store.list_runs() == []
+    assert store.list_rules(active_only=False) == []
+    assert store.get_inbox_email("email_001")["subject"] == "keep me"
+
+
 def test_replayer_does_not_overwrite_pilot_override(tmp_path, monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "")
     monkeypatch.setenv("DATA_DIR", str(tmp_path))

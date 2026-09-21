@@ -5,7 +5,7 @@
 //   offline — replays captured payloads from demo-data.js and simulates the
 //             ledger/replay loop client-side so the demo still tells its story
 //             on a static HTTPS host.
-import { request, API_BASE, ApiError, discoverApiBase, EMAIL_GET_TIMEOUT_MS, markReviewed as postReviewed } from "./api.js?v=69";
+import { request, API_BASE, ApiError, discoverApiBase, EMAIL_GET_TIMEOUT_MS, markReviewed as postReviewed } from "./api.js?v=70";
 import { DEMO_RUNS, DEMO_EMAILS, DEMO_CHAOS, DEMO_AUTONOMY } from "./demo-data.js";
 
 const clone = (v) => (typeof structuredClone === "function" ? structuredClone(v) : JSON.parse(JSON.stringify(v)));
@@ -415,10 +415,11 @@ class Store extends EventTarget {
     return { seeded: this.state.runs, official: this.state.runs.length, queued, reason: "fill" };
   }
 
-  startFill() {
+  startFill({ useAi = false } = {}) {
     if (this._filling) return;
     this._filling = true;
     this._fillFails = 0;
+    this._fillUseAi = Boolean(useAi);
     const tick = async () => {
       if (!this.live) {
         this._filling = false;
@@ -427,11 +428,16 @@ class Store extends EventTarget {
       const need = this.state.health?.inbox?.email_count || this.state.health?.inbox?.official_count || 0;
       if (need && this.state.runs.length >= need) {
         this._filling = false;
+        this._fillUseAi = false;
         this.set({ job: null }, "job");
         return;
       }
       try {
-        const out = await request("/api/demo/seed", { method: "POST", timeout: 50000 });
+        const out = await request("/api/demo/seed", {
+          method: "POST",
+          timeout: 50000,
+          body: this._fillUseAi ? { use_ai: true } : {},
+        });
         this._fillFails = 0;
         await this.refresh();
         const queued = out?.queued || 0;
@@ -440,12 +446,16 @@ class Store extends EventTarget {
           job: queued ? { status: "running", processed: this.state.runs.length, total, updated_at: new Date().toISOString() } : null,
         }, "job");
         if (queued > 0) this._fillTimer = setTimeout(tick, 500);
-        else this._filling = false;
+        else {
+          this._filling = false;
+          this._fillUseAi = false;
+        }
       } catch {
         this._fillFails += 1;
         await this.refresh().catch(() => {});
         if (this._fillFails >= 8) {
           this._filling = false;
+          this._fillUseAi = false;
           this.set({ job: null }, "job");
           return;
         }
@@ -485,29 +495,69 @@ class Store extends EventTarget {
   async resetChaos() {
     if (this.live) {
       await request("/api/chaos/reset", { method: "POST", timeout: 45000 });
+      await this.refresh();
+      return { reason: "chaos cleared" };
     }
-    return this.reset();
+    this.set({ lastChaos: null, runs: this.state.runs.filter((r) => !String(r.email_id || "").startsWith("chaos_")) }, "chaos-reset");
+    this.recompute();
+    return { reason: "offline chaos cleared" };
   }
 
   async reset() {
     return this.withBusy(async () => {
       if (this.live) {
-        const hosted = this.state.health?.inbox?.source === "supabase"
-          || this.state.health?.db?.backend === "postgres";
-        if (hosted) {
-          // Drop throwaway chaos_* smash rows so the berth returns to the official 520.
-          await request("/api/chaos/reset", { method: "POST", timeout: 45000 }).catch(() => null);
-          await this.refresh();
-          return { reason: "hosted ledger preserved" };
-        }
-        await request("/api/demo/reset", { method: "POST" });
-        await request("/api/autonomy", { method: "POST", body: { preset: "balanced" } }).catch(() => {});
+        const out = await request("/api/board/rebuild", {
+          method: "POST",
+          timeout: 90000,
+          body: { confirm: true, use_ai: true },
+        });
+        this._pendingVerdicts?.clear?.();
+        this._offline = { ledger: [], reviews: [] };
+        this.set({ runs: [], ledger: [], lastChaos: null, job: null }, "reset");
         await this.refresh();
-        return;
+        const queued = out?.queued || 0;
+        if (queued > 0) this.startFill({ useAi: true });
+        return out;
       }
       this._offline = { ledger: [], reviews: [] };
       this.set({ runs: [], ledger: [], lastChaos: null, autonomy: clone(DEMO_AUTONOMY) }, "reset");
       this.recompute();
+      return { reason: "offline cleared" };
+    });
+  }
+
+  async reopenToPilot({ caseId, note = "reopen to pilot" }) {
+    return this.withBusy(async () => {
+      if (this.live) {
+        const out = await request("/api/review/reopen", {
+          method: "POST",
+          timeout: 20000,
+          body: { case_id: caseId, reviewer: "pilot", note },
+        });
+        await this.refresh();
+        return out;
+      }
+      const runs = this.state.runs.map((run) => {
+        if (run.case_id !== caseId && run.run_id !== caseId && run.email_id !== caseId) return run;
+        const card = {
+          ...(run.payload?.card || {}),
+          verdict: "PILOT",
+          pilot_override: false,
+          pilot_override_note: note,
+        };
+        delete card.reply_draft;
+        return { ...run, verdict: "PILOT", payload: { ...run.payload, card } };
+      });
+      const src = this.state.runs.find((r) => r.case_id === caseId || r.run_id === caseId || r.email_id === caseId);
+      const caseKey = src?.case_id || caseId;
+      const emailId = src?.email_id || caseId;
+      const ledger = this.state.ledger.map((r) => {
+        const hit = r.source_case_id === caseKey || (r.field === "case" && r.left_pattern === emailId);
+        return hit ? { ...r, active: false, revoked_at: new Date().toISOString() } : r;
+      });
+      this.set({ runs, ledger }, "reopen");
+      this.recompute();
+      return { case_id: caseKey, email_id: emailId, verdict: "PILOT" };
     });
   }
 

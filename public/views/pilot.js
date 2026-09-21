@@ -1,11 +1,11 @@
 // ③ Pilot deck — the human in the loop. One decision becomes a ledger rule, the
 // ledger replays history, and the queue visibly collapses.
-import { store as bridgeStore } from "../lib/store.js?v=69";
-import { esc, $, $$, on, shortId, diffChars, renderDiff, fmtUsd, sourceWaitHtml } from "../lib/dom.js?v=69";
+import { store as bridgeStore } from "../lib/store.js?v=70";
+import { esc, $, $$, on, shortId, diffChars, renderDiff, fmtUsd, sourceWaitHtml } from "../lib/dom.js?v=70";
 import { gsap, reduced, enter, countTo, collapseOut, pulse } from "../lib/motion.js";
 import { fieldZh, fieldEn, RISK, failureZh } from "../lib/copy.js";
-import { card, orderedFields, pilotReasons, ledgerRef, confidenceOf } from "../lib/case.js?v=69";
-import { effectiveState, present } from "../lib/field-display.js?v=69";
+import { card, orderedFields, pilotReasons, ledgerRef, confidenceOf } from "../lib/case.js?v=70";
+import { effectiveState, present } from "../lib/field-display.js?v=70";
 
 export function mount(root, ctx, params = {}) {
   const store = ctx.store || bridgeStore;
@@ -62,6 +62,20 @@ export function mount(root, ctx, params = {}) {
   on(mainEl, "click", "[data-detail]", () => ctx.openDetail(runId));
   on(mainEl, "click", "[data-open-run]", (_, el) => ctx.openDetail(el.dataset.openRun));
   on(mainEl, "click", "[data-board]", () => ctx.navigate("board"));
+  on(mainEl, "click", "[data-reopen-case]", async (_, el) => {
+    el.disabled = true;
+    try {
+      await store.reopenToPilot({ caseId: el.dataset.reopenCase || runId });
+      lastStamp = null;
+      ctx.toast("Mail reopened to Pilot", "ok");
+      pickDefaults();
+      renderQueue();
+      renderMain(true);
+    } catch (e) {
+      ctx.toast(e.message, "err");
+      el.disabled = false;
+    }
+  });
 
   const SMASH = ["ATTACHMENT_CORRUPT", "OCR_GARBLED", "EMPTY_EMAIL", "LLM_TIMEOUT"];
   function isChaos(run) {
@@ -316,6 +330,7 @@ export function mount(root, ctx, params = {}) {
       ${draft ? `<div class="section-title" style="margin-top:1.2rem"><h3>Outbox reply</h3><small>DRAFT · never auto-sent</small></div><pre class="pilot-mail">${esc(draft)}</pre>` : ""}
       <div class="decide-row">
         <button type="button" class="btn btn-primary" data-board>Back to Board <span class="arrow">→</span></button>
+        <button type="button" class="btn btn-pilot" data-reopen-case="${esc(s.runId)}">Reopen to Pilot</button>
         <button type="button" class="btn" data-ledger>Open Ledger</button>
         <button type="button" class="btn" data-detail>Case detail</button>
       </div>`;

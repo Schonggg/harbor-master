@@ -2063,6 +2063,8 @@ mark.delta {
 
 /* ── Ledger ────────────────────────────────────────────────────────────── */
 .rule-list { display: grid; gap: 0.6rem; }
+.ledger-section { margin-bottom: 1.6rem; }
+.rule-actions { display: flex; flex-direction: column; gap: 0.4rem; align-items: stretch; }
 .rule {
   display: grid;
   grid-template-columns: auto 1fr auto;

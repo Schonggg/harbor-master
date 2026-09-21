@@ -190,6 +190,82 @@ def set_case_verdict(body: CaseVerdictBody):
     }
 
 
+class ReopenBody(BaseModel):
+    case_id: str = ""
+    reviewer: str = "pilot"
+    note: str = "reopen to pilot"
+
+
+@router.post("/review/reopen")
+def reopen_to_pilot(body: ReopenBody):
+    """Undo a human CLEAR/HOLD: mail returns to Pilot; case stamp and taught pairs from this case are revoked."""
+    run = _find_run(body.case_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="case not found")
+    store = LedgerStore()
+    payload = dict(run.get("payload") or {})
+    card = dict(payload.get("card") or {})
+    if not card.get("pilot_override") and str(run.get("verdict") or "").upper() == "PILOT":
+        return {
+            "case_id": run["case_id"],
+            "email_id": run["email_id"],
+            "verdict": "PILOT",
+            "revoked": [],
+            "reason": "already in Pilot",
+        }
+
+    case_id = str(run.get("case_id") or body.case_id)
+    email_id = str(run.get("email_id") or "")
+    revoked: list[str] = []
+    undone = 0
+    for rule in store.list_rules(active_only=False):
+        if not rule.active:
+            continue
+        if rule.source_case_id != case_id and not (
+            rule.field == CASE_FIELD and rule.left_pattern == email_id
+        ):
+            continue
+        store.revoke(rule.rule_id)
+        revoked.append(rule.rule_id)
+        if rule.field != CASE_FIELD:
+            undone += int((Replayer(store).undo(rule.rule_id) or {}).get("updated") or 0)
+
+    card["verdict"] = CaseVerdict.PILOT.value
+    card["pilot_override"] = False
+    card["pilot_override_by"] = ""
+    card["pilot_override_note"] = body.note or "reopen to pilot"
+    card.pop("reply_draft", None)
+    # Peel ledger paint left on this card from its own rules.
+    for fv in card.get("field_verdicts") or []:
+        if not isinstance(fv, dict):
+            continue
+        rat = str(fv.get("rationale") or "")
+        if rat.startswith("ledger"):
+            fv["state"] = "UNCERTAIN"
+            fv["rationale"] = "reopened to pilot"
+            if fv.get("winning_strategy") == "ledger":
+                fv["winning_strategy"] = None
+    payload["card"] = card
+    official = payload.get("official")
+    if isinstance(official, dict) and official.get("category") == "BL_COMPARISON":
+        official = dict(official)
+        official["status"] = ComparisonStatus.NEEDS_REVIEW.value
+        payload["official"] = official
+        try:
+            store.save_verdict(email_id, EmailVerdict.model_validate(official), payload=official)
+        except Exception:
+            pass
+    store.save_run(run["run_id"], run["case_id"], email_id, CaseVerdict.PILOT.value, payload)
+    return {
+        "case_id": run["case_id"],
+        "email_id": email_id,
+        "verdict": "PILOT",
+        "revoked": revoked,
+        "replay": {"updated": undone},
+        "reviewer": body.reviewer,
+    }
+
+
 @router.get("/review/{case_id}")
 def get_case(case_id: str):
     row = _find_run(case_id)

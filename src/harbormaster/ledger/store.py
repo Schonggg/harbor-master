@@ -149,6 +149,31 @@ class LedgerStore:
             conn.execute("DELETE FROM stored_objects")
             conn.execute("DELETE FROM reviewed_marks")
 
+    def wipe_board_for_rebuild(self) -> dict:
+        """Drop all judgments and Ledger memory. Keep inbox emails and LLM cache."""
+        with self._connect() as conn:
+            counts = {}
+            for table in (
+                "case_runs",
+                "pilot_reviews",
+                "ledger_rules",
+                "email_verdicts",
+                "pipeline_jobs",
+                "reviewed_marks",
+            ):
+                try:
+                    cur = conn.execute(f"DELETE FROM {table}")
+                    counts[table] = int(cur.rowcount or 0)
+                except Exception:
+                    counts[table] = 0
+            try:
+                conn.execute(
+                    "DELETE FROM llm_cache WHERE cache_key LIKE ?",
+                    ("ops:ledger_repair_%",),
+                )
+            except Exception:
+                pass
+        return counts
     def _init_schema(self) -> None:
         global _PG_SCHEMA_READY
         if self.dsn and _PG_SCHEMA_READY:
