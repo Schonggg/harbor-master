@@ -1,6 +1,6 @@
 # Harbormaster
 
-Shipping-document verification with a three-state court. The language model extracts values. Deterministic Python decides whether they match. A human closes the cases the system cannot.
+Shipping-document verification with a three-state court. The language model extracts values. Deterministic Python decides whether they match. A human (or optional AI Pilot second pass) closes the cases the system cannot.
 
 The live product is the **official SDOC inbox (520 emails)** on a public HTTPS Bridge. Replay fixtures (`demo_*`) are not the judged demo.
 
@@ -24,7 +24,24 @@ GitHub: [https://github.com/Schonggg/harbor-master](https://github.com/Schonggg/
 
 ## Current progress
 
-What is in production as of 20 Sep 2026.
+What is in production as of 22 Sep 2026.
+
+**How a mail is judged (two desks, one pipeline).**
+
+1. **Scout + Reader** — rules first; LLM extracts field values when configured. The model never writes CLEAR / HOLD / PILOT.
+2. **Court + Risk** — deterministic MATCH / MISMATCH / UNCERTAIN per field, then roll-up to CLEAR / HOLD / PILOT.
+3. **Pilot desk** — humans close greys. Optional **AI Pilot** is a second pass that only closes remaining UNCERTAIN / PILOT cases; it is not the main judge.
+4. **Ledger** — contested SI/BL pairs + case stamps. **Revoke** re-opens auto-closed mail; **Reopen to Pilot** undoes a human CLEAR/HOLD.
+
+Bridge header counts map from the official graded statuses as:
+
+| Official status | Bridge berth | Full 520 (`data/submission.json`) |
+|---|---|---:|
+| `OK` | **CLEAR** | **454** |
+| `MISMATCH` | **HOLD** | **46** |
+| `NEEDS_REVIEW` | **PILOT** | **20** |
+
+A mid-run board with a large PILOT pile is usually greys still waiting (pass 1 only). A rules-only Refresh refill climbs CLEAR fast and is **not** the same as a full extract + AI Pilot pass. Hosted fill is one official email per request (Vercel time budget); rules-only rebuild of 520 is on the order of ~1–2 hours, full LLM extract several hours more.
 
 **Official score (local replay of the organizer `score_cli.py`).** Rules-only walk of `data/sdoc/` (520 emails) writes `data/submission.json`. `py -3 scripts/benchmark_official.py` calls `score_cli.py --json`, so the summary prints real numbers, not `n/a`:
 
@@ -48,7 +65,7 @@ Five sponsor-generator seeds (`7, 23, 99, 150, 2026`) each score official `final
 | `GENERAL` | 60 | Ops noise, greetings, reminders. A bare SI/BL mention is not promoted. |
 | `SPAM` | 40 | Promo, unsubscribe, lottery, and the phishing patterns above. |
 
-Of the 220 comparison cases: **154 OK**, **46 MISMATCH**, **20 NEEDS_REVIEW**. Non-comparison rows emit `status: "OK"` (sponsor sample shape), not `null`. Whole-file status mix: **454 OK / 46 MISMATCH / 20 NEEDS_REVIEW**.
+Of the 220 comparison cases: **154 OK**, **46 MISMATCH**, **20 NEEDS_REVIEW**. Non-comparison rows emit `status: "OK"` (sponsor sample shape), not `null`. Whole-file status mix: **454 OK / 46 MISMATCH / 20 NEEDS_REVIEW** (Bridge: **454 CLEAR / 46 HOLD / 20 PILOT**).
 
 **Official `NEEDS_REVIEW`.** Five mails per reason (20 total):
 
@@ -61,9 +78,11 @@ Of the 220 comparison cases: **154 OK**, **46 MISMATCH**, **20 NEEDS_REVIEW**. N
 
 **Reader.** Image-only PDFs go to VisionParser. A short labelled PDF still uses PdfParser (`pdf_has_text` min 1 character) so the 220-cell format matrix stays green. DOCX tables flatten to `label: value`. Party names strip `(Non-Negotiable)` / pipe-address tails before L5 exact compare.
 
-**Bridge.** Board **Find** (`/`): email number or keywords. Case **Find in source** jumps to the email body or, when the value came from an SI/BL file, the attachment excerpt under the body. Court has no 0.5×/1×/2× playback chrome (Replay / `R` still re-runs the hearing). Pilot CLEAR/HOLD always writes a Ledger row (a case stamp, plus any SI/BL pairs so later mail can replay). Opening Ledger also restores older human CLEAR/HOLD stamps that were closed before case stamps existed, so three reviews stay three rows. Chaos smash is a throwaway `chaos_*` row, rules-only — it does not rewrite an official CLEAR mail. Board **filed folder**: a checkbox on each card files it off the open docket (`reviewed_marks` in Postgres). Closing the site, adding mail, or re-running AI does not unfile it. Cache lockstep: `app.js?v=70` / `store.js?v=70`, `styles.css?v=47`. Header brand is text-only **HARBORMASTER**. The Board **Filed** chip is a one-line control next to Refresh — it must not reuse the `.empty` docket card styles.
+**Bridge.** Board **Find** (`/`): email number or keywords. Case **Find in source** jumps to the email body or, when the value came from an SI/BL file, the attachment excerpt under the body. Court has no 0.5×/1×/2× playback chrome (Replay / `R` still re-runs the hearing). Outbox drafts are **English-only**. Pilot CLEAR/HOLD always writes a Ledger row (a case stamp, plus contested SI/BL pairs so later mail can replay). **Reopen to Pilot** returns a closed case to the queue. Chaos smash is a throwaway `chaos_*` row, rules-only — it does not rewrite an official CLEAR mail. Board **filed folder**: a checkbox on each card files it off the open docket (`reviewed_marks` in Postgres). Cache lockstep: `app.js?v=70` / `store.js?v=70`, `styles.css?v=47`. Header brand is text-only **HARBORMASTER**.
 
-**Tests.** `py -3 -m pytest -q --ignore=tests/test_seed_robustness.py --ignore=tests/test_official_score.py --ignore=tests/test_scanned_pdf.py` is **148 passed**.
+**Header Refresh.** Confirms, then wipes Ledger + human Pilot stamps (inbox and LLM cache kept). Default hosted rebuild prefers **rules-only** so the 520 berth can refill in about 1–2 hours; pass `use_ai: true` for full LLM extract (several hours on the one-email-per-request fill). Rules-only counts will not match the 454 / 46 / 20 graded mix until a full extract pass is done.
+
+**Tests.** `py -3 -m pytest -q --ignore=tests/test_seed_robustness.py --ignore=tests/test_official_score.py --ignore=tests/test_scanned_pdf.py` is **156 passed**.
 
 ---
 
@@ -90,7 +109,7 @@ Three courtroom roles exist. They are deterministic Python, not three extra mode
 ```
 Email -> Scout -> Reader -> Court -> Risk -> Report -> Bridge
                               ^
-                         Ledger <- Pilot (human)
+                    Ledger <- Pilot (human | optional AI Pilot)
 ```
 
 | Layer | Responsibility |
@@ -99,8 +118,8 @@ Email -> Scout -> Reader -> Court -> Risk -> Report -> Bridge
 | **Reader** | MIME-aware parsers (PDF via PyMuPDF, DOCX including tables, XLSX, text, vision for image-only scans). The LLM extracts `FieldValue` with evidence. It never writes a verdict. |
 | **Court** | Prosecutor / Defender / Judge. Seven defences: suffix strip, UN/LOCODE map, unit convert, reference resolve, numeric extract, label synonym, OCR confusion (scans only). |
 | **Risk** | Prices exposure from `config/risk_matrix.yaml` and rolls field states into CLEAR / HOLD / PILOT. |
-| **Pilot** | Human desk. Case-level CLEAR or HOLD always writes a **case stamp** on the Ledger (`email_id → CLEAR|HOLD`), and teaches remaining **UNCERTAIN / MISMATCH** SI/BL pairs so later mail with the same writings can replay. Already-MATCH fields are not re-taught (that used to mass-clear unrelated Pilot mail). Field-level **Lock in Ledger** writes one pair. Smash/empty mail still gets a case stamp. Older reviews that had no pair are backfilled the next time Ledger loads. Opening Ledger never changes Board verdicts. |
-| **Ledger** | Durable memory of Pilot work. Contested pair rules replay on open Pilot mail. Case stamps are provenance only. **Revoke** on a pair re-opens auto-closed mail; **Reopen to Pilot** undoes a human CLEAR/HOLD and its taught pairs. Header **Refresh** wipes the whole book and re-judges the 520 with AI (inbox kept). |
+| **Pilot** | Human desk for greys after Court. Case-level CLEAR or HOLD always writes a **case stamp** on the Ledger (`email_id → CLEAR|HOLD`), and teaches remaining **UNCERTAIN / MISMATCH** SI/BL pairs so later mail can replay. Optional **AI Pilot** may close leftover PILOT as a second pass; it does not replace Court. Already-MATCH fields are not re-taught. Field-level **Lock in Ledger** writes one pair. Opening Ledger never changes Board verdicts. |
+| **Ledger** | Durable memory of Pilot work. Contested pair rules replay on open Pilot mail. Case stamps are provenance only. **Revoke** on a pair re-opens auto-closed mail; **Reopen to Pilot** undoes a human CLEAR/HOLD and its taught pairs. Header **Refresh** wipes the book and re-judges the 520 (inbox + LLM cache kept; default hosted path is rules-only for speed). |
 | **Filed folder** | Independent of Ledger and of `CaseCard`. A human mark (`reviewed_marks`) hides a card from the default Board docket after the operator has handled the files. Survives reload and re-AI. Hosted Refresh does not delete it; wiping the Supabase tables does. |
 | **Outbox** | English-only draft reply on CLEAR / HOLD / PILOT. Never auto-sent; never feeds `defect_fields`. Legacy bilingual drafts are rewritten to English when served. |
 | **Reliability** | Retry, rules-only degrade, and Chaos injectors. Empty, corrupt, timeout, and garbled OCR paths force PILOT with a failure code. |
@@ -125,8 +144,8 @@ Six operator views, same origin as the API when served by FastAPI:
 |---|---|---|
 | `1` | **Board** | Docket of unique emails. Official subjects, CLEAR / HOLD / PILOT counters. Full-width **Find** strip. Checkboxes file handled cards into a folder (`Filed N · View`); they leave the open docket until unfiled. The case drawer can file the same way. |
 | `2` | **Court** | Charge first (SI vs BL), then one named defence at a time, then the three-state ruling. `R` replays the hearing. No playback-speed control. |
-| `3` | **Pilot** | Human queue. Filters: Lock to Ledger / All / Chaos / Degraded. Case CLEAR or HOLD always adds a Ledger row (case stamp + any SI/BL pairs). Field **Lock in Ledger** writes one pair. |
-| `4` | **Ledger** | Every Pilot ruling: case stamps plus reusable SI/BL pair rules. Pair rules replay on later mail. |
+| `3` | **Pilot** | Human queue (optional AI Pilot can pre-close greys). Filters: Lock to Ledger / All / Chaos / Degraded. Case CLEAR or HOLD always adds a Ledger row. Field **Lock in Ledger** writes one pair. |
+| `4` | **Ledger** | Every Pilot ruling: case stamps plus reusable SI/BL pair rules. **Revoke** / **Reopen to Pilot** undo closures without wiping the board. |
 | `5` | **Chaos** | Four injectors on throwaway `chaos_*` rows (rules-only, no LLM). Smash used to re-run a live CLEAR email and 504 on Vercel — it no longer touches the official 520. Refresh board drops smash rows and re-judges any official mail an older smash overwrote. |
 | `6` | **Metrics** | Score-sheet KPIs (0 false alarms, 220/220, 520/520), live desk mix, then a **HOLD-strictness dial** that can rewrite this session's header. |
 
@@ -140,7 +159,7 @@ Header buttons are **Refresh** and **Load inbox**. Load inbox fills at most one 
 
 **Header counts.** `CLEAR` / `HOLD` / `PILOT` are unique official emails (`email_*`) in Postgres. Chaos smash rows (`chaos_*`) stay on the Chaos / Pilot filters and **do not** inflate the header. Filing a Board card does not change those counts — it only hides the card on the open docket.
 
-**Header Refresh.** Confirms, then wipes Ledger + human Pilot stamps and re-judges the official 520 with AI (inbox kept, LLM cache kept). Counts climb back to the first AI pass while the fill job runs.
+**Header Refresh.** Confirms, then wipes Ledger + human Pilot stamps and re-judges the official 520 (inbox kept, LLM cache kept). Hosted default is rules-only so counts climb quickly; full extract needs `use_ai` and takes much longer.
 
 **HOLD strictness (Metrics).** The dial previews a stricter or looser HOLD gate on the **same 520 evidence**. MATCH fields and empty / degraded cards stay as recorded. **Apply to this desk** rewrites this session's header, Board, and Pilot. **Restore recorded 520** (or Refresh) returns the stamps from Postgres. Official `submission.json` is not rewritten. On this corpus leftover mismatch confidence sits around 0.93 and 0.96, so Balanced 0.92 matches the live header and Cautious 0.97 hands those HOLDs to Pilot.
 
@@ -148,7 +167,7 @@ Header buttons are **Refresh** and **Load inbox**. Load inbox fills at most one 
 
 **Board cards.** Mild mouse-follow tilt. Every view must import `store.js` with the same `?v=` as `app.js` in `web/index.html`. A mismatch creates two stores and the board looks empty while the header still counts 520.
 
-**Cache.** After a UI change, bump that `?v=` lockstep (`app.js` / `store.js` currently `?v=66`, `styles.css` `?v=46`), run `py -3 scripts/vercel_build.py`, then deploy. Do not hard-refresh only `index.html`.
+**Cache.** After a UI change, bump that `?v=` lockstep (`app.js` / `store.js` currently `?v=70`, `styles.css` `?v=47`), run `py -3 scripts/vercel_build.py`, then deploy. Do not hard-refresh only `index.html`.
 
 The frontend (`web/`) is static - no build step. Three.js and GSAP are vendored. If the API is unreachable, the Bridge falls back to **offline replay** from `web/lib/demo-data.js`. That 14-email snapshot is **not** mixed into the live 520 board.
 
@@ -171,7 +190,7 @@ The Bridge and the graded submission share one pipeline and two contracts.
 - Seven snake_case fields: `shipper`, `consignee`, `notify_party`, `port_of_loading`, `port_of_discharge`, `container_count`, `gross_weight_kg`
 - `decided_by`: `rule` or `llm`
 
-PILOT on the Bridge is a human interrupt. Official `NEEDS_REVIEW` is reserved for unreadable or missing-document cases, not for "the model was unsure." Unparseable compare values also go to `NEEDS_REVIEW` - they must not silently become `MISMATCH`. Scene A ("please send draft" with no files) is not `missing_attachment`. A structural `wrong_doc_type` is a health check, not an L5 fuzzy match. On the local 520, those four reasons fire **five times each** (20 mails). Do not treat a previous ~226-review dump as the current gate.
+PILOT on the Bridge is the interrupt desk (human, or optional AI Pilot second pass). Official `NEEDS_REVIEW` is reserved for unreadable or missing-document cases, not for "the model was unsure." A large Bridge PILOT count mid-run usually means UNCERTAIN greys still open — that is not the same as the graded 20 `NEEDS_REVIEW` mails. Unparseable compare values also go to `NEEDS_REVIEW` - they must not silently become `MISMATCH`. Scene A ("please send draft" with no files) is not `missing_attachment`. A structural `wrong_doc_type` is a health check, not an L5 fuzzy match. On the local 520, those four reasons fire **five times each** (20 mails).
 
 ---
 
